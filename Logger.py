@@ -6,7 +6,7 @@ class Logger:
     def __init__(self):
 
         self.config = configparser.ConfigParser()
-        self.config.read('../ignore/config.ini', encoding = 'utf-8')
+        self.config.read('config.ini', encoding = 'utf-8')
 
     def telegram_bot(self, channel_name, msg):
         bot_token = self.config['tele_bot']['token']
@@ -42,6 +42,6 @@ class Logger:
 
 if __name__ == '__main__':
     log = Logger()
-    stg_name = '직장인투자전략'
+    stg_name = '에러봇'
 
     log.telegram_bot(stg_name, 'error')
