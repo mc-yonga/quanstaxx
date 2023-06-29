@@ -109,7 +109,7 @@ class Main(QMainWindow):
     def btn9(self):
         print('테스트매수')
         try:
-            self.OrderQ.put(('305540', '매수', 'market', 0, 100, '테스트'))
+            self.OrderQ.put(('305540', '매수', 'market', 0, 10, '테스트'))
             TradingManager_update = self.TradingManager['305540']
             TradingManager_update['매수주문여부'] = True
             TradingManager_update['매수주문시간'] = datetime.datetime.now()
@@ -120,7 +120,7 @@ class Main(QMainWindow):
     def btn11(self):
         print('테스트매도')
         try:
-            self.OrderQ.put(('305540', '매도', 'market', 0, 100, '테스트'))
+            self.OrderQ.put(('305540', '매도', 'market', 0, 10, '테스트'))
             TradingManager_update = self.TradingManager['305540']
             TradingManager_update['매도주문여부'] = True
             TradingManager_update['매도주문시간'] = datetime.datetime.now()
@@ -129,7 +129,7 @@ class Main(QMainWindow):
             print(e)
 
     def btn10(self):
-        os.remove('log/슈퍼ETF_보유현황.json', )
+        os.remove(f'log/{self.stg_name}_보유현황.json', )
         for stockCode in self.PositionManager.keys():
             PositionManager_update = self.PositionManager[stockCode]
             for i, v in PositionManager_update.items():
