@@ -1,3 +1,4 @@
+import traceback
 from multiprocessing import *
 import configparser
 import pprint
@@ -41,7 +42,20 @@ class Strategy:
                 position = json.load(file)
             position = eval(position)
 
+            while True:
+                if len(self.PositionManager.keys()) == 0:
+                    import time
+                    time.sleep(1)
+                    print('아직 업데이트 안됨', self.PositionManager)
+                    continue
+                else:
+                    print('완료')
+                    break
+
             for stockCode in position.keys():
+                if stockCode not in self.PositionManager.keys():
+                    self.PositionManager.update({stockCode: dict(종목명=0, 평균매수가격=0, 보유수량=0, 평가금액=0, 평가손익률=0, 평가손익금액=0, 주문번호=0)})
+
                 if position[stockCode]['보유수량'] > 0:
                     PositionManager_update = self.PositionManager[stockCode]
                     PositionManager_update['평균매수가격'] = position[stockCode]['평균매수가격']
@@ -51,8 +65,13 @@ class Strategy:
                     self.PositionManager.update({stockCode : PositionManager_update})
                     self.BuyList.append(stockCode)
             pprint.pprint(dict(self.PositionManager))
-        except:
+            print(f'보유리스트 >> {self.BuyList}')
+
+        except FileNotFoundError:
             print('아직 매매내역이 없음')
+        except:
+            print(traceback.format_exc())
+            print('오류')
 
     def Observer(self):
         while True:
@@ -137,7 +156,6 @@ class Strategy:
 
                 if stockCode not in self.BuyList and self.TradingManager[stockCode]['매수주문번호'] in self.OrderManager.keys() and self.TradingManager[stockCode]['매수주문정정'] == False:
                     gap = datetime.datetime.now() - self.TradingManager[stockCode]['매수주문시간']
-                    buyOrderID = self.TradingManager[stockCode]['매수주문번호']
 
                     if self.TradingManager[stockCode]['매수주문번호'] in self.ExecManager.keys():
                         print(f'[매수 미체결] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")},'
@@ -162,13 +180,18 @@ class Strategy:
 
                     print(f'[보유중] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 평균매수가격 : {self.PositionManager[stockCode]["평균매수가격"]}, 매수수량 : {self.PositionManager[stockCode]["보유수량"]}, 수익률 : {profit}')
 
-                    ###### 매도 테스트 코드 ########
-                    # signalName = '보유종목청산'
-                    # if self.TradingManager[stockCode]['매도주문여부'] == False:
-                    #     self.OrderQ.put((stockCode, '매도', 'market', 0, 10, signalName))
-                    #     TradingManager_update = self.TradingManager[stockCode]
-                    #     TradingManager_update['매도주문여부'] = True
-                    #     self.TradingManager.update({stockCode : TradingManager_update})
+
+                elif stockCode not in self.BuyList and self.TradingManager[stockCode]['조건충족여부'] == True:
+                    orderQty = 10
+                    signalName = '장중매수'
+                    self.OrderQ.put((stockCode, '매수', 'market', 0, orderQty, signalName))
+                    TradingManager_update = self.TradingManager[stockCode]
+                    TradingManager_update['매수주문여부'] = True
+                    self.TradingManager.update({stockCode: TradingManager_update})
+
+                elif stockCode not in self.BuyList and self.TradingManager[stockCode]['조건충족여부'] == False:
+                    print(f'[조건충족 X] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 현재가 : {currentPrice}, 당일시가 >> {dayopen}')
+
 
                 PriceManager_update['당일시가'] = dayopen
                 PriceManager_update['당일고가'] = dayhigh
@@ -193,19 +216,16 @@ class Strategy:
 
 def get_key(motoo: bool):
     config = configparser.ConfigParser()
-    config.read('../ignore/config.ini', encoding='utf-8')
+    config.read('config.ini', encoding='utf-8')
 
-    if motoo == True:
-        name = 'motoo'
-    else:
-        name = 'real'
+    if motoo == True: a = '모투'
+    else: a = '실투'
+    app_key = config[a]['app_key']
+    secret_key = config[a]['secret_key']
+    acc_num = config[a]['acc_num']
+    id = config[a]['id']
+    return app_key, secret_key, acc_num, id
 
-    app_key = config[f'{name}_trading']['app_key']
-    secret_key = config[f'{name}_trading']['secret_key']
-    acc_num = config[f'{name}_trading']['acc_num']
-    id = config[f'{name}_trading']['id']
-
-    return app_key, secret_key, acc_num, id, motoo
 if __name__ == '__main__':
     PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ = \
         Queue(), Queue(), Queue(), Queue(), Queue()
@@ -216,9 +236,10 @@ if __name__ == '__main__':
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
-    app_key, secret_key, acc_num, id, motoo = get_key(True)
+    motoo = True
+    app_key, secret_key, acc_num, id = get_key(motoo)
     account_data = [app_key, secret_key, acc_num, id, motoo]
-    strategy_name = '테스트'
+    strategy_name = '에러봇'
 
     Strategy(qlist, managerlist, account_data, strategy_name)
 
