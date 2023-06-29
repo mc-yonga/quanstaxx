@@ -126,26 +126,23 @@ class PriceReceiver:
     def CreateUniverse(self):
         todate = datetime.datetime.now()
         frdate = todate - datetime.timedelta(days = 300)
+
         adj_frdate = frdate.strftime('%Y%m%d')
         adj_todate = todate.strftime('%Y%m%d')
 
         df = getData(adj_frdate, adj_todate, self.witID)
-
         self.universe = df.columns
-        print(df)
-        print(self.universe)
-        # dayopen, dayhigh, daylow, dayclose, dayvolume = get_ohlcv('20230627', adj_todate, self.universe)
 
         self.PositionManager.update({x : dict(종목명 = 0, 평균매수가격 = 0, 보유수량 = 0, 평가금액 = 0, 평가손익률 = 0, 평가손익금액 = 0, 주문번호 = 0) for x in self.universe})
-        # self.TradingManager.update({x : dict(매수주문번호 = 0, 매도주문번호 = 0, 진입예정가격 = 0, 진입예정수량 = 0,
-        #                                      전일고가 = dayhigh.iloc[-1][x], 전일저가 = daylow.iloc[-1][x], 전일시가 = dayopen.iloc[-1][x],
-        #                                      매수주문여부 = False, 매도주문여부 = False, 매수주문시간 = datetime.datetime.now(), 매도주문시간 = datetime.datetime.now(), 매수주문정정 = False, 매도주문정정 = False) for x in self.universe})
 
-        self.TradingManager.update({x: dict(매수주문번호=0, 매도주문번호=0, 진입예정가격=0, 진입예정수량=0, 전일고가=0, 전일저가=0, 전일시가=0,
-                                            매수주문여부=False, 매도주문여부=False, 매수주문시간=datetime.datetime.now(),
-                                            매도주문시간=datetime.datetime.now(), 매수주문정정=False, 매도주문정정=False, 조건충족여부 = df.iloc[-1][x]) for x in self.universe})
+        self.TradingManager.update({x : dict(매수주문번호 = 0, 매도주문번호 = 0, 진입예정가격 = 0, 진입예정수량 = 0,
+                                             전일고가 = 0, 전일저가 = 0, 전일시가 = 0,
+                                             매수주문여부 = False, 매도주문여부 = False, 매수주문시간 = datetime.datetime.now(), 매도주문시간 = datetime.datetime.now(),
+                                             매수주문정정 = False, 매도주문정정 = False, 조건충족여부 = df.iloc[-1][x]) for x in self.universe})
 
         self.PriceManger.update({x: dict(체결시간=0, 당일시가=0, 당일고가=0, 당일저가=0, 현재가=0, 예상체결가=0, 예상체결수량=0) for x in self.universe})
+
+        print('===== 매니저 업데이트 완료 =====')
 
     async def PriceExecWebsocket(self):
 
