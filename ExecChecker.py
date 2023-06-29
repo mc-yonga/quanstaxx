@@ -48,6 +48,9 @@ def get_approval(key, secret):
 
 
 def aes_cbc_base64_dec(key, iv, cipher_text):
+    print(key)
+    print(iv)
+    print(cipher_text)
     """
     :param key:  str type AES256 secret key value
     :param iv: str type AES256 Initialize Vector
@@ -140,7 +143,11 @@ class Checker:
                     recvstr = data.split('|')  # 수신데이터가 실데이터 이전은 '|'로 나뉘어져있어 split
                     trid0 = recvstr[1]
                     if trid0 == "K0STCNI0" or trid0 == "K0STCNI9" or trid0 == "H0STCNI0" or trid0 == "H0STCNI9":  # 주실체결 통보 처리
-                        resp = OrderExecData(recvstr[3], aes_key, aes_iv)
+                        try:
+                            resp = OrderExecData(recvstr[3], aes_key, aes_iv)
+                        except:
+                            print('복호화 에러발생')
+                            continue
 
                         pprint.pprint(resp)
                         self.logger.add_log(resp, f'{self.stg_name}_체결내역')
@@ -189,7 +196,7 @@ class Checker:
                             self.ExecManager.update({orderID: ExecManager_update})
 
                         if self.ExecManager[orderID]['미체결수량'] == 0:
-                            if stockCode not in self.PositionManager[stockCode]:    ### 테스트 매수/매도 주문시 종목코드가 전략운용에 필요없는 종목일 경우 continue
+                            if stockCode not in self.PositionManager.keys():    ### 테스트 매수/매도 주문시 종목코드가 전략운용에 필요없는 종목일 경우 continue
                                 continue
                             PositionManager_update = self.PositionManager[stockCode]
                             if side == '02':  # 매수
