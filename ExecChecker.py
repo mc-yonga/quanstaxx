@@ -54,20 +54,9 @@ def aes_cbc_base64_dec(key, iv, cipher_text):
     :param cipher_text: Base64 encoded AES256 str
     :return: Base64-AES256 decodec str
     """
-    try:
-        try:
-            cipher = AES.new(key.encode('cp949'), AES.MODE_CBC, iv.encode('cp949'))
-            return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
-        except:
-            cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
-            return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
 
-    except Exception as e:
-        print(e)
-        print(traceback.format_exc())
-        Logger.Logger().add_log('', 'error')
-        Logger.Logger().telegram_bot('에러봇', '복호화 과정에서 에러발생')
-
+    cipher = AES.new(key.encode('cp949'), AES.MODE_CBC, iv.encode('cp949'))
+    return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
 
 def OrderExecData(data, key, iv):
     # AES256 처리 단계
@@ -200,6 +189,8 @@ class Checker:
                             self.ExecManager.update({orderID: ExecManager_update})
 
                         if self.ExecManager[orderID]['미체결수량'] == 0:
+                            if stockCode not in self.PositionManager[stockCode]:    ### 테스트 매수/매도 주문시 종목코드가 전략운용에 필요없는 종목일 경우 continue
+                                continue
                             PositionManager_update = self.PositionManager[stockCode]
                             if side == '02':  # 매수
                                 PositionManager_update['평균매수가격'] = self.ExecManager[orderID]['평균체결가격']
