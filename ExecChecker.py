@@ -57,9 +57,15 @@ def aes_cbc_base64_dec(key, iv, cipher_text):
     :param cipher_text: Base64 encoded AES256 str
     :return: Base64-AES256 decodec str
     """
-
-    cipher = AES.new(key.encode('cp949'), AES.MODE_CBC, iv.encode('cp949'))
-    return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
+    try:
+        cipher = AES.new(key.encode('cp949'), AES.MODE_CBC, iv.encode('cp949'))
+        return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
+    except:
+        print('-------복호화 예외처리 -------')
+        cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
+        result = bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size), 'utf-8', errors='replace')
+        result = result.replace('\ufffd', '')
+        return result
 
 def OrderExecData(data, key, iv):
     # AES256 처리 단계
@@ -143,11 +149,9 @@ class Checker:
                     recvstr = data.split('|')  # 수신데이터가 실데이터 이전은 '|'로 나뉘어져있어 split
                     trid0 = recvstr[1]
                     if trid0 == "K0STCNI0" or trid0 == "K0STCNI9" or trid0 == "H0STCNI0" or trid0 == "H0STCNI9":  # 주실체결 통보 처리
-                        try:
-                            resp = OrderExecData(recvstr[3], aes_key, aes_iv)
-                        except:
-                            print('복호화 에러발생')
-                            continue
+
+                        print(recvstr, aes_key, aes_iv)
+                        resp = OrderExecData(recvstr[3], aes_key, aes_iv)
 
                         pprint.pprint(resp)
                         self.logger.add_log(resp, f'{self.stg_name}_체결내역')
@@ -292,6 +296,7 @@ class Checker:
                                 aes_key = jsonObject["body"]["output"]["key"]
                                 aes_iv = jsonObject["body"]["output"]["iv"]
                                 print("### TRID [%s] KEY[%s] IV[%s]" % (trid, aes_key, aes_iv))
+                                print('하하호호')
 
                     elif trid == "PINGPONG":
                         # print("### RECV [PINGPONG] [%s]" % (data))
