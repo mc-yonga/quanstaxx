@@ -12,6 +12,7 @@ import Order
 import pprint
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
+import create_token
 
 class Main(QMainWindow):
     def __init__(self,Qlist, managerList, account_data, stg_name):
@@ -109,7 +110,7 @@ class Main(QMainWindow):
     def btn9(self):
         print('테스트매수')
         try:
-            self.OrderQ.put(('305540', '매수', 'market', 0, 10, '테스트'))
+            self.OrderQ.put(('122630', '매수', 'market', 0, 10, '테스트'))
             TradingManager_update = self.TradingManager['305540']
             TradingManager_update['매수주문여부'] = True
             TradingManager_update['매수주문시간'] = datetime.datetime.now()
@@ -120,7 +121,7 @@ class Main(QMainWindow):
     def btn11(self):
         print('테스트매도')
         try:
-            self.OrderQ.put(('305540', '매도', 'market', 0, 10, '테스트'))
+            self.OrderQ.put(('122630', '매도', 'market', 0, 10, '테스트'))
             TradingManager_update = self.TradingManager['305540']
             TradingManager_update['매도주문여부'] = True
             TradingManager_update['매도주문시간'] = datetime.datetime.now()
@@ -157,6 +158,8 @@ def QuitAPP(app):
     app.quit()
 
 if __name__ == '__main__':
+
+    create_token.Token('모투').get_access_token()  # 토큰부터 업데이트,
 
     PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ = \
         Queue(), Queue(), Queue(), Queue(), Queue()
