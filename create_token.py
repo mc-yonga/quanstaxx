@@ -64,6 +64,7 @@ class Token:
         URL = f"{self.base_url}/{PATH}"
         res = requests.post(URL, headers=headers, data=json.dumps(body))
         ACCESS_TOKEN = res.json()["access_token"]
+        print('토큰갱신완료')
         return ACCESS_TOKEN
 
 if __name__ == '__main__':
