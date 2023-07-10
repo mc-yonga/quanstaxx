@@ -4,19 +4,19 @@ import mojito
 import requests
 import json
 
-def get_key(motoo):
-    """
-
-    :param motoo: '모투' or '실투'
-    :return:
-    """
+def get_key(motoo: bool):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
 
-    app_key = config[motoo]['app_key']
-    secret_key = config[motoo]['secret_key']
-    acc_num = config[motoo]['acc_num']
-    id = config[motoo]['id']
+    if motoo == True:
+        keyword = '모투'
+    else:
+        keyword = '실투'
+
+    app_key = config[keyword]['app_key']
+    secret_key = config[keyword]['secret_key']
+    acc_num = config[keyword]['acc_num']
+    id = config[keyword]['id']
 
     return app_key, secret_key, acc_num, id
 
@@ -24,8 +24,8 @@ class Token:
     def __init__(self, motoo):
         """
 
-        :param motoo: 모투 or 실투
-        """
+        :param motoo: True or False
+                """
 
         app_key, secret_key, acc_num, id = get_key(motoo)
         print(acc_num, id)

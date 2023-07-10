@@ -16,34 +16,6 @@ import pprint
 
 clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
 
-def getData(frdate, todate, witID, universe = []):
-    config = configparser.ConfigParser()
-    config.read('config.ini', encoding='utf-8')
-    id = config['퀀트박스']['ID']
-    pw = config['퀀트박스']['PW']
-    quantbox.set_credentials(id, pw)
-
-    print(frdate, todate, id, pw, universe)
-    data = quantbox.get_wit(witID, from_date=frdate, to_date=todate, stock_codes=universe)['result'][witID]
-    bsDate = stock.get_previous_business_days(fromdate=data.index[0], todate=data.index[-1])
-    data.index = pd.to_datetime(data.index)
-
-    return data.loc[bsDate]
-
-def get_ohlcv(frdate, todate, universe):
-    dayopen_id = '8a7b64e55d1b4106ad06fe3d7bd5e0ab'
-    dayhigh_id = '90061a7e9c6649348bbf43df106ae4f5'
-    daylow_id = 'bd57b20d2b6b40bb8d15e173213f612c'
-    dayclose_id = '74d3770e8c27447d80e2fdcea4e4837f'
-    dayvolume_id = '89fb44ed574b41be8902dc22f94c02d0'
-    dayopen = getData(frdate, todate, dayopen_id, universe)
-    dayhigh = getData(frdate, todate, dayhigh_id, universe)
-    daylow = getData(frdate, todate, daylow_id, universe)
-    dayclose = getData(frdate, todate, dayclose_id, universe)
-    dayvolume = getData(frdate, todate, dayvolume_id, universe)
-
-    return dayopen, dayhigh, daylow, dayclose, dayvolume
-
 def get_key(motoo: bool):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
@@ -95,7 +67,10 @@ def get_approval(key, secret):
     return approval_key
 
 class PriceReceiver:
-    def __init__(self, witID, Qlist, managerList, account_data, strategy_name):
+    def __init__(self,subsStocks, stg_option, Qlist, managerList, account_data):
+
+        print('===== Receiver Start =====')
+
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
         self.acc_num = account_data[2]
@@ -115,34 +90,11 @@ class PriceReceiver:
         self.PositionManager = managerList[4]
         self.BalanceManager = managerList[5]
         self.TradingManager = managerList[6]
-        self.witID = witID
+        self.subsStocks = subsStocks
 
-        self.universe = None
-        self.stg_name = strategy_name
+        self.stg_name = stg_option['전략명']
         self.logger = Logger()
-        self.CreateUniverse()
         self.PriceExecChecker()
-
-    def CreateUniverse(self):
-        todate = datetime.datetime.now()
-        frdate = todate - datetime.timedelta(days = 300)
-
-        adj_frdate = frdate.strftime('%Y%m%d')
-        adj_todate = todate.strftime('%Y%m%d')
-
-        df = getData(adj_frdate, adj_todate, self.witID)
-        self.universe = df.columns
-
-        self.PositionManager.update({x : dict(종목명 = 0, 평균매수가격 = 0, 보유수량 = 0, 평가금액 = 0, 평가손익률 = 0, 평가손익금액 = 0, 주문번호 = 0) for x in self.universe})
-
-        self.TradingManager.update({x : dict(매수주문번호 = 0, 매도주문번호 = 0, 진입예정가격 = 0, 진입예정수량 = 0,
-                                             전일고가 = 0, 전일저가 = 0, 전일시가 = 0,
-                                             매수주문여부 = False, 매도주문여부 = False, 매수주문시간 = datetime.datetime.now(), 매도주문시간 = datetime.datetime.now(),
-                                             매수주문정정 = False, 매도주문정정 = False, 조건충족여부 = df.iloc[-1][x]) for x in self.universe})
-
-        self.PriceManger.update({x: dict(체결시간=0, 당일시가=0, 당일고가=0, 당일저가=0, 현재가=0, 예상체결가=0, 예상체결수량=0) for x in self.universe})
-
-        print('===== 매니저 업데이트 완료 =====')
 
     async def PriceExecWebsocket(self):
 
@@ -152,8 +104,8 @@ class PriceReceiver:
             url = 'ws://ops.koreainvestment.com:31000'  # 실전투자
 
         approval_key = get_approval(self.app_key, self.secret_key)
-        code_list = [['1', 'H0STCNT0', x] for x in self.universe]
-        code_list2 = [['1', 'H0STASP0', x] for x in self.universe]
+        code_list = [['1', 'H0STCNT0', x] for x in self.subsStocks]
+        code_list2 = [['1', 'H0STASP0', x] for x in self.subsStocks]
 
         send_data_list = []
         for i, j, k in code_list:
@@ -200,7 +152,7 @@ class PriceReceiver:
 
                         result = dict(종목코드 = stock_code, 당일시가 = dayopen, 당일고가 = dayhigh, 당일저가 = daylow, 현재가 = dayclose,
                                   당일누적거래량 = dayvolume, 당일누적거래대금 = dayamount, 매수호가1 = buy_hoka1, 매도호가1 = sell_hoka1, TRID = 'H0STCNT0')
-                    # print(result)
+                    print(result)
                     self.PriceQ.put(result)
 
                 else:
@@ -231,7 +183,6 @@ class PriceReceiver:
         my_loop.close()
 
 if __name__ == '__main__':
-
     PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ = \
         Queue(), Queue(), Queue(), Queue(), Queue()
 
@@ -246,7 +197,5 @@ if __name__ == '__main__':
     account_data = [app_key, secret_key, acc_num, id, motoo]
     strategy_name = '테스트'
 
-    witID = '27dd3db59261495e83ec262a33e13850'
-
-    PriceReceiver(witID, qlist, managerlist, account_data, strategy_name)
+    PriceReceiver(subsStocks, stg_option, Qlist, managerList, account_data)
 

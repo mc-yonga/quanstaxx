@@ -20,18 +20,23 @@ config.read('config.ini', encoding='UTF-8')
 
 clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
 
+
 def get_key(motoo: bool):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
 
-    if motoo == True: a = '모투'
-    else: a = '실투'
-    app_key = config[a]['app_key']
-    secret_key = config[a]['secret_key']
-    acc_num = config[a]['acc_num']
-    id = config[a]['id']
+    if motoo == True:
+        keyword = '모투'
+    else:
+        keyword = '실투'
 
-    return app_key, secret_key, acc_num, id
+    app_key = config[keyword]['app_key']
+    secret_key = config[keyword]['secret_key']
+    acc_num = config[keyword]['acc_num']
+    id = config[keyword]['id']
+
+    return app_key, secret_key, acc_num, id, motoo
+
 
 def get_approval(key, secret):
     """웹소켓 접속키 발급"""
@@ -48,9 +53,6 @@ def get_approval(key, secret):
 
 
 def aes_cbc_base64_dec(key, iv, cipher_text):
-    print(key)
-    print(iv)
-    print(cipher_text)
     """
     :param key:  str type AES256 secret key value
     :param iv: str type AES256 Initialize Vector
@@ -58,14 +60,22 @@ def aes_cbc_base64_dec(key, iv, cipher_text):
     :return: Base64-AES256 decodec str
     """
     try:
-        cipher = AES.new(key.encode('cp949'), AES.MODE_CBC, iv.encode('cp949'))
-        return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
-    except:
-        print('-------복호화 예외처리 -------')
-        cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
-        result = bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size), 'utf-8', errors='replace')
-        result = result.replace('\ufffd', '')
-        return result
+        try:
+            cipher = AES.new(key.encode('cp949'), AES.MODE_CBC, iv.encode('cp949'))
+            return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
+        except:
+            cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
+            result = bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size), 'utf-8',
+                                  errors='replace')
+            result = result.replace('\ufffd', '')
+            return result
+
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        Logger.Logger().add_log('', 'error')
+        Logger.Logger().telegram_bot('에러봇', '복호화 과정에서 에러발생')
+
 
 def OrderExecData(data, key, iv):
     # AES256 처리 단계
@@ -90,7 +100,7 @@ def OrderExecData(data, key, iv):
 
 
 class Checker:
-    def __init__(self, Qlist, managerList, account_data, strategy_name):
+    def __init__(self, Qlist, managerList, account_data, universe, strategy_name):
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
         self.acc_num = account_data[2]
@@ -111,6 +121,7 @@ class Checker:
         self.BalanceManager = managerList[5]
         self.TradingManager = managerList[6]
 
+        self.universe = universe
         self.stg_name = strategy_name
 
         self.logger = Logger.Logger()
@@ -149,8 +160,6 @@ class Checker:
                     recvstr = data.split('|')  # 수신데이터가 실데이터 이전은 '|'로 나뉘어져있어 split
                     trid0 = recvstr[1]
                     if trid0 == "K0STCNI0" or trid0 == "K0STCNI9" or trid0 == "H0STCNI0" or trid0 == "H0STCNI9":  # 주실체결 통보 처리
-
-                        print(recvstr, aes_key, aes_iv)
                         resp = OrderExecData(recvstr[3], aes_key, aes_iv)
 
                         pprint.pprint(resp)
@@ -200,13 +209,15 @@ class Checker:
                             self.ExecManager.update({orderID: ExecManager_update})
 
                         if self.ExecManager[orderID]['미체결수량'] == 0:
-                            if stockCode not in self.PositionManager.keys():    ### 테스트 매수/매도 주문시 종목코드가 전략운용에 필요없는 종목일 경우 continue
+
+                            if stockCode not in self.PositionManager.keys():  # 감시종목이 아닌 종목의 체결데이터가 오면 continue
                                 continue
                             PositionManager_update = self.PositionManager[stockCode]
                             if side == '02':  # 매수
                                 PositionManager_update['평균매수가격'] = self.ExecManager[orderID]['평균체결가격']
                                 PositionManager_update['보유수량'] = self.ExecManager[orderID]['누적체결수량']
                                 PositionManager_update['주문번호'] = orderID
+                                PositionManager_update['매수날짜'] = datetime.datetime.now()
                                 self.PositionManager.update({stockCode: PositionManager_update})
 
                                 record = dict(체결시간=datetime.datetime.now(), 종목코드=stockCode, 매수도구분=side,
@@ -261,10 +272,8 @@ class Checker:
 
                                 PositionManager_update['평균매수가격'] = 0
                                 PositionManager_update['보유수량'] = 0
-                                PositionManager_update['평가금액'] = 0
-                                PositionManager_update['평가손익률'] = 0
-                                PositionManager_update['평가손익금액'] = 0
                                 PositionManager_update['주문번호'] = 0
+                                PositionManager_update['매도날짜'] = datetime.datetime.now()
                                 self.PositionManager.update({stockCode: PositionManager_update})
                                 with open(f'log/{self.stg_name}_보유현황.json', 'w') as json_file:
                                     json.dump(self.PositionManager, json_file, default=str)
@@ -296,7 +305,6 @@ class Checker:
                                 aes_key = jsonObject["body"]["output"]["key"]
                                 aes_iv = jsonObject["body"]["output"]["iv"]
                                 print("### TRID [%s] KEY[%s] IV[%s]" % (trid, aes_key, aes_iv))
-                                print('하하호호')
 
                     elif trid == "PINGPONG":
                         # print("### RECV [PINGPONG] [%s]" % (data))
@@ -319,8 +327,7 @@ if __name__ == '__main__':
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
-    motoo = True
-    app_key, secret_key, acc_num, id = get_key(True)
+    app_key, secret_key, acc_num, id, motoo = get_key(True)
     account_data = [app_key, secret_key, acc_num, id, motoo]
     strategy_name = '테스트'
     universe = ['005930', '214180']

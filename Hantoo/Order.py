@@ -16,6 +16,8 @@ class OrderSignal(QThread):
     CreateMarketOrder = pyqtSignal(str, str, int, int, str)
     CreateLimitOrder = pyqtSignal(str, str, int, int, str)
     EditOrder = pyqtSignal(str, str, str, int, int, bool, str)
+    CancelOrder = pyqtSignal(str, str, int, bool, str, int)
+
 
     def __init__(self, main):
         super().__init__()
@@ -34,11 +36,8 @@ class OrderSignal(QThread):
                 stockCode, side, orderType, orderPrice, orderQty, signalName = data
                 if orderType == 'market':
                     self.CreateMarketOrder.emit(stockCode, side, orderPrice, orderQty, signalName)
-                else:
+                elif orderType == 'limit':
                     self.CreateLimitOrder.emit(stockCode, side, orderPrice, orderQty, signalName)
-            else:
-                orgID, buyorderID, orderType, orderPrice, orderQty, total, signalName = data
-                self.EditOrder.emit(orgID, buyorderID, orderType, orderPrice, orderQty, total, signalName)
 
 class Order:
     def __init__(self, Qlist, managerList, account_data, stg_name):
@@ -78,10 +77,14 @@ class Order:
         self.orderSignal = OrderSignal(self)
         self.orderSignal.CreateMarketOrder.connect(self.CreateMarketOrder)
         self.orderSignal.CreateLimitOrder.connect(self.CreateLimitOrder)
-        self.orderSignal.EditOrder.connect(self.ModifyOrder)
         self.orderSignal.start()
 
         app.exec_()
+
+        if self.motoo == False:
+            self.base_url = 'https://openapi.koreainvestment.com:9443'
+        else:
+            self.base_url = 'https://openapivts.koreainvestment.com:29443'
 
         try:
             with open("token.dat", "rb") as f:
@@ -89,6 +92,7 @@ class Order:
                 self.access_token = f'Bearer {data["access_token"]}'
         except:
             self.GetAccessToken()
+            # pass
 
     def BalanceManagerUpdate(self):
         resp = self.BalanceInfo()
@@ -98,12 +102,6 @@ class Order:
         print('밸런스 매니저 업데이트 완료')
 
     def GetAccessToken(self):
-
-        if self.motoo == False:
-            self.base_url = 'https://openapi.koreainvestment.com:9443'
-        else:
-            self.base_url = 'https://openapivts.koreainvestment.com:29443'
-
         headers = {"content-type": "application/json"}
         body = {"grant_type": "client_credentials",
                 "appkey": self.app_key,
@@ -145,7 +143,6 @@ class Order:
             pprint.pprint(result)
             print('')
 
-
             self.logger.add_log(result, f'{self.stg_name}_주문내역')
 
             TradingManager_update = self.TradingManager[stockCode]
@@ -165,7 +162,7 @@ class Order:
                 order_manager_update['주문명'] = signalName
                 order_manager_update['주문구분'] = '01'
 
-                self.OrderManager.update({stockCode : order_manager_update})
+                self.OrderManager.update({orderID : order_manager_update})
 
             QTest.qWait(1000)
             if side == '매수':
@@ -259,17 +256,20 @@ class Order:
             order_time = resp['output']['ORD_TMD']
             adj_time2 = datetime.datetime.strptime(order_time, '%H%M%S')
             today = datetime.datetime.now()
-            orderTime = datetime.datetime(today.year, today.month, today.day, adj_time2.hour, adj_time2.minute, adj_time2.second)
+            orderTime = datetime.datetime(today.year, today.month, today.day, adj_time2.hour,
+                                          adj_time2.minute, adj_time2.second)
             orderID = str(int(resp['output']['ODNO']))
             orderComID = str(int(resp['output']['KRX_FWDG_ORD_ORGNO']))
 
-            result = dict(주문시각=orderTime, 주문번호=orderID, 한국거래소전송주문조직번호=orderComID, 매수도구분 = '',
+            result = dict(주문시각=orderTime, 주문번호=orderID, 한국거래소전송주문조직번호=orderComID, 매수도구분='',
                           종목코드=stockCode, 주문가격=orderPrice, 주문수량=orderQty, 주문명=signalName, 주문구분=orderType)
 
             self.logger.add_log(result, f'{self.stg_name}_주문내역')
 
             TradingManager_update = self.TradingManager[stockCode]
-            TradingManager_update[f'{self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]["매수도구분"]}주문번호'] = orderID
+
+            TradingManager_update[
+                f'{self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]["매수도구분"]}주문번호'] = orderID
             self.TradingManager.update({stockCode: TradingManager_update})
 
             if orderID not in self.OrderManager.keys():
@@ -343,14 +343,17 @@ def get_key(motoo: bool):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
 
-    if motoo == True: a = '모투'
-    else: a = '실투'
-    app_key = config[a]['app_key']
-    secret_key = config[a]['secret_key']
-    acc_num = config[a]['acc_num']
-    id = config[a]['id']
+    if motoo == True:
+        keyword = '모투'
+    else:
+        keyword = '실투'
 
-    return app_key, secret_key, acc_num, id
+    app_key = config[keyword]['app_key']
+    secret_key = config[keyword]['secret_key']
+    acc_num = config[keyword]['acc_num']
+    id = config[keyword]['id']
+
+    return app_key, secret_key, acc_num, id, motoo
 
 if __name__ == '__main__':
 
@@ -364,7 +367,8 @@ if __name__ == '__main__':
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
     motoo = True
-    app_key, secret_key, acc_num, id = get_key(motoo)
+    app_key, secret_key, acc_num, id, motoo = get_key(motoo = True)
+
     account_data = [app_key, secret_key, acc_num, id, motoo]
 
     a = Order(qlist, managerlist, account_data, '테스트')
