@@ -18,7 +18,6 @@ class OrderSignal(QThread):
     EditOrder = pyqtSignal(str, str, str, int, int, bool, str)
     CancelOrder = pyqtSignal(str, str, int, bool, str, int)
 
-
     def __init__(self, main):
         super().__init__()
         self.main = main
@@ -40,7 +39,7 @@ class OrderSignal(QThread):
                     self.CreateLimitOrder.emit(stockCode, side, orderPrice, orderQty, signalName)
 
 class Order:
-    def __init__(self, Qlist, managerList, account_data, stg_name):
+    def __init__(self, subStocks, stg_option, Qlist, managerList, account_data):
 
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
@@ -62,6 +61,9 @@ class Order:
         self.BalanceManager = managerList[5]
         self.TradingManager = managerList[6]
 
+        self.stg_option = stg_option
+        self.stg_name = self.stg_option['전략명']
+
         self.broker = mojito.KoreaInvestment(
             api_key = self.app_key,
             api_secret = self.secret_key,
@@ -72,7 +74,6 @@ class Order:
         self.BalanceManagerUpdate()
         app = QApplication(sys.argv)
 
-        self.stg_name = stg_name
         self.logger = Logger.Logger()
         self.orderSignal = OrderSignal(self)
         self.orderSignal.CreateMarketOrder.connect(self.CreateMarketOrder)
