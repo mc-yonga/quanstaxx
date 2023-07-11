@@ -14,12 +14,12 @@ import json
 from PyQt5.QtTest import *
 import datetime
 import pprint
+from pandas.tseries.offsets import BDay
 
 config = configparser.ConfigParser()
 config.read('config.ini', encoding='UTF-8')
 
 clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
-
 
 def get_key(motoo: bool):
     config = configparser.ConfigParser()
@@ -35,7 +35,7 @@ def get_key(motoo: bool):
     acc_num = config[keyword]['acc_num']
     id = config[keyword]['id']
 
-    return app_key, secret_key, acc_num, id, motoo
+    return app_key, secret_key, acc_num, id
 
 
 def get_approval(key, secret):
@@ -100,7 +100,8 @@ def OrderExecData(data, key, iv):
 
 
 class Checker:
-    def __init__(self, Qlist, managerList, account_data, universe, strategy_name):
+    def __init__(self, subStocks, stg_option, Qlist, managerList, account_data):
+        print('===== Exec Checker Start =====')
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
         self.acc_num = account_data[2]
@@ -121,8 +122,8 @@ class Checker:
         self.BalanceManager = managerList[5]
         self.TradingManager = managerList[6]
 
-        self.universe = universe
-        self.stg_name = strategy_name
+        self.stg_option = stg_option
+        self.stg_name = self.stg_option['전략명']
 
         self.logger = Logger.Logger()
         self.ExecChecker()
@@ -142,7 +143,6 @@ class Checker:
 
         async with websockets.connect(url, ping_interval=None) as websocket:
             await websocket.send(temp)
-            print('주식체결 웹소켓 시작 ,,,')
 
             while True:
                 if not websocket.open:
@@ -217,7 +217,8 @@ class Checker:
                                 PositionManager_update['평균매수가격'] = self.ExecManager[orderID]['평균체결가격']
                                 PositionManager_update['보유수량'] = self.ExecManager[orderID]['누적체결수량']
                                 PositionManager_update['주문번호'] = orderID
-                                PositionManager_update['매수날짜'] = datetime.datetime.now()
+                                PositionManager_update['매수날짜'] = datetime.datetime.today()
+                                PositionManager_update['매도예정날짜'] = datetime.datetime.today() + BDay(self.stg_option['리밸런싱'])
                                 self.PositionManager.update({stockCode: PositionManager_update})
 
                                 record = dict(체결시간=datetime.datetime.now(), 종목코드=stockCode, 매수도구분=side,
@@ -284,6 +285,8 @@ class Checker:
                                 TradingManager_update = self.TradingManager[stockCode]
                                 TradingManager_update['매도주문여부'] = False
                                 TradingManager_update['매도주문정정'] = False
+                                TradingManager_update['매도날짜'] = datetime.datetime.today()
+                                TradingManager_update['매수예정날짜'] = datetime.datetime.today() + BDay(1)
                                 self.TradingManager.update({stockCode: TradingManager_update})
                                 self.BalanceManager.update({'주문가능현금': self.BalanceManager['주문가능현금'] + profit_amount})
 
@@ -318,6 +321,30 @@ class Checker:
 
 
 if __name__ == '__main__':
+    motoo = True
+    # Token.Token(motoo).get_access_token()  # 토큰부터 업데이트,
+
+    buyCond_id = 'c94aab2a2abc4f889d4eeba5af6cfcc9'
+    sellCond_id = '950dd29001c2447e836fe24e86789c9d'
+
+    frdate = '20230701'
+    todate = '20230731'
+
+    stg_name = '테스트'  # 전략이름
+    totalBetSize = 100  # 총자산대비 투자비중
+    maxCnt = 10  # 최대 보유종목수
+    buyOption = 'atmarket'  # 매수옵션
+    sellOption = 'atmarket'  # 매도옵션
+    target = 10  # 목표가
+    loss = 10  # 손절가
+    rebal = 10  # 리밸런싱 기간
+    fee = 0.26  # 수수료
+
+    stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
+                      매도옵션=sellOption, 목표가=target, 손절가=loss)
+
+    subStocks = ['005930','233740']
+
     PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ = \
         Queue(), Queue(), Queue(), Queue(), Queue()
 
@@ -327,12 +354,7 @@ if __name__ == '__main__':
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
-    app_key, secret_key, acc_num, id, motoo = get_key(True)
+    app_key, secret_key, acc_num, id = get_key(motoo)
     account_data = [app_key, secret_key, acc_num, id, motoo]
-    strategy_name = '테스트'
-    universe = ['005930', '214180']
 
-    Checker(qlist, managerlist, account_data, universe, strategy_name)
-
-
-
+    Checker(subStocks, stg_option, qlist, managerlist, account_data)
