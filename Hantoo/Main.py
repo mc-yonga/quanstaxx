@@ -23,8 +23,6 @@ class Main(QMainWindow):
     def __init__(self, stg_option, Qlist, managerList, account_data):
         super().__init__()
 
-        print('시작')
-
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
         self.acc_num = account_data[2]
@@ -219,7 +217,7 @@ if __name__ == '__main__':
 
     stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
                       매도옵션=sellOption, 목표가=target, 손절가=loss)
-
+    print('===== 투자전략 분석중 =====')
     buyList = GetHoldingList(stg_name)
     if len(buyList) == 0:
         subStocks = CreateUniverse(frdate, todate, buyCond_id, universe=[])
@@ -227,6 +225,8 @@ if __name__ == '__main__':
         subStocks = buyList
     #### 보유종목이 있으면 그 종목들을 구독함
     #### 보유종목이 없으면 윗 아이디로 매수조건을 충족하는 종목들을 구독함
+
+    print('===== 투자전략 분석 완료 =====')
 
     print(f'구독 종목 리스트 >> {subStocks}')
 
@@ -247,6 +247,8 @@ if __name__ == '__main__':
     a.show()
 
     pcs1 = Process(target = Receiver.PriceReceiver, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon = True).start()
-    pcs2 = Process(target = STG1.Strategy, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
+    pcs3 = Process(target = ExecChecker.Checker, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
+    pcs4 = Process(target = Order.Order, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
+    pcs2 = Process(target=STG1.Strategy, args=(subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
 
     app.exec_()
