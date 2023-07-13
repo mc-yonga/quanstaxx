@@ -99,7 +99,7 @@ class Main(QMainWindow):
         for stockCode in self.PositionManager.keys():
             buyQty = self.PositionManager[stockCode]['보유수량']
             if buyQty > 0:
-                self.order.CreateMarketOrder('매도', stockCode, buyQty, '슈퍼ETF')
+                self.order.CreateMarketOrder('매도', stockCode, buyQty, f'{self.stg_name}')
 
     def btn6(self):
         pprint.pprint(dict(self.BalanceManager))
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     frdate = '20230701'
     todate = '20230731'
 
-    stg_name = '테스트'  # 전략이름
+    stg_name = '에러봇'  # 전략이름
     totalBetSize = 100  # 총자산대비 투자비중
     maxCnt = 10  # 최대 보유종목수
     buyOption = 'atmarket'  # 매수옵션
@@ -218,11 +218,12 @@ if __name__ == '__main__':
     stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
                       매도옵션=sellOption, 목표가=target, 손절가=loss)
     print('===== 투자전략 분석중 =====')
-    buyList = GetHoldingList(stg_name)
-    if len(buyList) == 0:
-        subStocks = CreateUniverse(frdate, todate, buyCond_id, universe=[])
-    else:
-        subStocks = buyList
+    subStocks = ['122630','305540']
+    # buyList = GetHoldingList(stg_name)
+    # if len(buyList) == 0:
+    #     subStocks = CreateUniverse(frdate, todate, buyCond_id, universe=[])
+    # else:
+    #     subStocks = buyList
     #### 보유종목이 있으면 그 종목들을 구독함
     #### 보유종목이 없으면 윗 아이디로 매수조건을 충족하는 종목들을 구독함
 
@@ -246,7 +247,7 @@ if __name__ == '__main__':
     a = Main(stg_option, qlist, managerlist, account_data)
     a.show()
 
-    pcs1 = Process(target = Receiver.PriceReceiver, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon = True).start()
+    pcs1 = Process(target = Receiver.Receiver, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon = True).start()
     pcs3 = Process(target = ExecChecker.Checker, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
     pcs4 = Process(target = Order.Order, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
     pcs2 = Process(target=STG1.Strategy, args=(subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
