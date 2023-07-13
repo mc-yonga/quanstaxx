@@ -53,33 +53,38 @@ class Strategy:
 
     def PriceManagerUpadate(self):
 
-        config = configparser.ConfigParser()
-        config.read('config.ini', encoding='utf-8')
+        # config = configparser.ConfigParser()
+        # config.read('config.ini', encoding='utf-8')
+        #
+        # id = config['퀀트박스']['ID']
+        # pw = config['퀀트박스']['PW']
+        #
+        # quantbox.set_credentials(id, pw)
+        #
+        # dayopen_id = '8a7b64e55d1b4106ad06fe3d7bd5e0ab'
+        # dayhigh_id = '90061a7e9c6649348bbf43df106ae4f5'
+        # daylow_id = 'bd57b20d2b6b40bb8d15e173213f612c'
+        # dayclose_id = 'bd02c376469541759725c8f5df21cdfc'
+        # dayvolume_id = '5bb1448ad6294e99baa0776057f0f310'
+        #
+        # todate = datetime.datetime.now()
+        # frdate = datetime.datetime.now() - datetime.timedelta(days = 1)
+        #
+        # frdate = frdate.strftime('%Y%m%d')
+        # todate = todate.strftime('%Y%m%d')
+        #
+        # dayopen = quantbox.get_wit(dayopen_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][dayopen_id]
+        # dayhigh = quantbox.get_wit(dayhigh_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][dayhigh_id]
+        # daylow = quantbox.get_wit(daylow_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][daylow_id]
+        # dayclose = quantbox.get_wit(dayclose_id, from_date = frdate, to_date = todate, stock_codes=self.subStocks)['result'][dayclose_id]
+        # dayvolume = quantbox.get_wit(dayvolume_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][dayvolume_id]
+        #
+        # self.PriceManger.update({x : dict(전일시가 = dayopen.iloc[-1][x], 전일고가 = dayhigh.iloc[-1][x], 전일저가 = daylow.iloc[-1][x], 전일종가 = dayclose.iloc[-1][x], 전일거래량 = dayvolume.iloc[-1][x],
+        #                                   당일시가 = 0, 당일고가 = 0, 당일저가 = 0, 현재가 = 0)
+        #                          for x in self.subStocks})
 
-        id = config['퀀트박스']['ID']
-        pw = config['퀀트박스']['PW']
 
-        quantbox.set_credentials(id, pw)
-
-        dayopen_id = '8a7b64e55d1b4106ad06fe3d7bd5e0ab'
-        dayhigh_id = '90061a7e9c6649348bbf43df106ae4f5'
-        daylow_id = 'bd57b20d2b6b40bb8d15e173213f612c'
-        dayclose_id = 'bd02c376469541759725c8f5df21cdfc'
-        dayvolume_id = '5bb1448ad6294e99baa0776057f0f310'
-
-        todate = datetime.datetime.now()
-        frdate = datetime.datetime.now() - datetime.timedelta(days = 20)
-
-        frdate = frdate.strftime('%Y%m%d')
-        todate = todate.strftime('%Y%m%d')
-
-        dayopen = quantbox.get_wit(dayopen_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][dayopen_id]
-        dayhigh = quantbox.get_wit(dayhigh_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][dayhigh_id]
-        daylow = quantbox.get_wit(daylow_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][daylow_id]
-        dayclose = quantbox.get_wit(dayclose_id, from_date = frdate, to_date = todate, stock_codes=self.subStocks)['result'][dayclose_id]
-        dayvolume = quantbox.get_wit(dayvolume_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][dayvolume_id]
-
-        self.PriceManger.update({x : dict(전일시가 = dayopen.iloc[-1][x], 전일고가 = dayhigh.iloc[-1][x], 전일저가 = daylow.iloc[-1][x], 전일종가 = dayclose.iloc[-1][x], 전일거래량 = dayvolume.iloc[-1][x],
+        self.PriceManger.update({x : dict(전일시가 = 1, 전일고가 = 1, 전일저가 = 1, 전일종가 = 1, 전일거래량 = 1,
                                           당일시가 = 0, 당일고가 = 0, 당일저가 = 0, 현재가 = 0)
                                  for x in self.subStocks})
 
@@ -188,7 +193,7 @@ class Strategy:
                 PriceManager_update['예상체결가'] = expacPrice
                 PriceManager_update['예상체결수량'] = expacQty
 
-            elif now > market_start or now < dongsihoga:
+            elif now > market_start and now < dongsihoga:
                 if data['TRID'] != 'H0STCNT0':
                     continue
 
@@ -244,8 +249,7 @@ class Strategy:
                 PriceManager_update['당일저가'] = daylow
                 PriceManager_update['현재가'] = currentPrice
 
-            elif now > dongsihoga:  ### 3시 20분 동시호가부터 장 마감할떄까지
-
+            elif now > dongsihoga and now < market_end:  ### 3시 20분 동시호가부터 장 마감할떄까지
                 if data['TRID'] != 'H0STASP0':
                     continue
 
