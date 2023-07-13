@@ -2,17 +2,14 @@ import websockets
 import json
 import asyncio
 import requests
-
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from base64 import b64decode
 from multiprocessing import *
-import os, quantbox
-from pykrx import stock
-import pandas as pd
 from Logger import *
 import datetime
 import pprint
+import traceback
 
 clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
 
@@ -50,8 +47,22 @@ def aes_cbc_base64_dec(key, iv, cipher_text):
     :param cipher_text: Base64 encoded AES256 str
     :return: Base64-AES256 decodec str
     """
-    cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
-    return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
+    try:
+        try:
+            cipher = AES.new(key.encode('cp949'), AES.MODE_CBC, iv.encode('cp949'))
+            return bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size))
+        except:
+            cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
+            result = bytes.decode(unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size), 'utf-8',
+                                  errors='replace')
+            result = result.replace('\ufffd', '')
+            return result
+
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        Logger().add_log('', 'error')
+        Logger().telegram_bot('에러봇', '복호화 과정에서 에러발생')
 
 def get_approval(key, secret):
     """웹소켓 접속키 발급"""
@@ -66,7 +77,28 @@ def get_approval(key, secret):
     approval_key = res.json()["approval_key"]
     return approval_key
 
-class PriceReceiver:
+def OrderExecData(data, key, iv):
+    # AES256 처리 단계
+
+    aes_dec_str = aes_cbc_base64_dec(key, iv, data)
+    pValue = aes_dec_str.split('^')
+
+    if pValue[13] == '2':  # 체결통보
+        print("#### 국내주식 체결 통보 ####")
+        menulist = "고객ID|계좌번호|주문번호|원주문번호|매도매수구분|정정구분|주문종류|주문조건|주식단축종목코드|체결수량|체결단가|주식체결시간|거부여부|체결여부|접수여부|지점번호|주문수량|계좌명|체결종목명|신용구분|신용대출일자|체결종목명40|주문가격"
+        menustr1 = menulist.split('|')
+    else:
+        print("#### 국내주식 주문·정정·취소·거부 접수 통보 ####")
+        menulist = "고객ID|계좌번호|주문번호|원주문번호|매도매수구분|정정구분|주문종류|주문조건|주식단축종목코드|주문수량|주문가격|주식체결시간|거부여부|체결여부|접수여부|지점번호|주문수량|계좌명|주문종목명|신용구분|신용대출일자|체결종목명40|체결단가"
+        menustr1 = menulist.split('|')
+
+    data_list = {}
+    min_len = min(len(pValue), len(menustr1))  #### pValue 갯수가 일정하게 들어오지 않음, 어떤때는 22개, 어떤때는 25개가 날라옴
+    for i in range(min_len):  ### 그래서 pvalue와 mennustr1 갯수 중에서 작은 값을 for문 돌림
+        data_list.update({menustr1[i]: pValue[i]})
+    return data_list
+
+class Receiver:
     def __init__(self,subsStocks, stg_option, Qlist, managerList, account_data):
 
         print('===== Receiver Start =====')
@@ -92,18 +124,21 @@ class PriceReceiver:
         self.TradingManager = managerList[6]
         self.subsStocks = subsStocks
 
-        self.stg_name = stg_option['전략명']
+        # self.stg_name = stg_option['전략명']
         self.logger = Logger()
         self.PriceExecChecker()
 
     async def PriceExecWebsocket(self):
 
         if self.motoo == True:
-            url = 'ws://ops.koreainvestment.com:21000' # 모의투자
+            url = 'ws://ops.koreainvestment.com:31000'  # 모의계좌
+            tr_id = 'H0STCNI9'
         else:
-            url = 'ws://ops.koreainvestment.com:31000'  # 실전투자
+            url = 'ws://ops.koreainvestment.com:21000'  # 실전계좌
+            tr_id = 'H0STCNI0'
 
         approval_key = get_approval(self.app_key, self.secret_key)
+
         code_list = [['1', 'H0STCNT0', x] for x in self.subsStocks]
         code_list2 = [['1', 'H0STASP0', x] for x in self.subsStocks]
 
@@ -115,6 +150,11 @@ class PriceReceiver:
         for i, j, k in code_list2:
             temp = '{"header":{"approval_key": "%s","custtype":"%s","tr_type":"%s","content-type":"utf-8"},"body":{"input":{"tr_id":"%s","tr_key":"%s"}}}' % (approval_key, 'P', i, j, k)
             send_data_list.append(temp)
+
+        code_list = ['1', tr_id, self.id]
+        temp = '{"header":{"approval_key": "%s","custtype":"P","tr_type":"%s","content-type":"utf-8"},"body":{"input":{"tr_id":"%s","tr_key":"%s"}}}' % (
+            approval_key, code_list[0], code_list[1], code_list[2])
+        send_data_list.append(temp)
 
         async with websockets.connect(url, ping_interval = None) as websocket:
             for send_data in send_data_list:
@@ -137,6 +177,7 @@ class PriceReceiver:
 
                     if trid0 == 'H0STASP0':
                         result = stockhoka(recvstr[3])
+                        self.PriceQ.put(result)
 
                     elif trid0 == 'H0STCNT0':
                         resp = stocks_purchase(recvstr[3])
@@ -152,8 +193,15 @@ class PriceReceiver:
 
                         result = dict(종목코드 = stock_code, 당일시가 = dayopen, 당일고가 = dayhigh, 당일저가 = daylow, 현재가 = dayclose,
                                   당일누적거래량 = dayvolume, 당일누적거래대금 = dayamount, 매수호가1 = buy_hoka1, 매도호가1 = sell_hoka1, TRID = 'H0STCNT0')
-                    print(result)
-                    self.PriceQ.put(result)
+
+                        self.PriceQ.put(result)
+
+                elif data[0] == '1':
+                    recvstr = data.split('|')  # 수신데이터가 실데이터 이전은 '|'로 나뉘어져있어 split
+                    trid0 = recvstr[1]
+                    if trid0 == "K0STCNI0" or trid0 == "K0STCNI9" or trid0 == "H0STCNI0" or trid0 == "H0STCNI9":
+                        resp = OrderExecData(recvstr[3], aes_key, aes_iv)
+                        self.ExecQ.put(resp)
 
                 else:
                     jsonObject = json.loads(data)
@@ -194,8 +242,12 @@ if __name__ == '__main__':
 
     motoo = True
     app_key, secret_key, acc_num, id = get_key(motoo)
+    print(app_key)
+    print(secret_key)
     account_data = [app_key, secret_key, acc_num, id, motoo]
     strategy_name = '테스트'
 
-    PriceReceiver(subsStocks, stg_option, Qlist, managerList, account_data)
+    subStocks = ['122630', '233740']
+    stg_option = None
+    Receiver(subStocks, stg_option, qlist, managerlist, account_data)
 
