@@ -4,19 +4,14 @@ import mojito
 import requests
 import json
 
-def get_key(motoo: bool):
+def get_key(stg_name):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
 
-    if motoo == True:
-        keyword = '모투'
-    else:
-        keyword = '실투'
-
-    app_key = config[keyword]['app_key']
-    secret_key = config[keyword]['secret_key']
-    acc_num = config[keyword]['acc_num']
-    id = config[keyword]['id']
+    app_key = config[stg_name]['app_key']
+    secret_key = config[stg_name]['secret_key']
+    acc_num = config[stg_name]['acc_num']
+    id = config[stg_name]['id']
 
     return app_key, secret_key, acc_num, id
 
@@ -68,4 +63,5 @@ class Token:
         return ACCESS_TOKEN
 
 if __name__ == '__main__':
-    Token('모투').get_access_token()
+    stg_name = '테스트전략'
+    Token(stg_name).get_access_token()
