@@ -15,8 +15,8 @@ from PyQt5.QtTest import *
 class OrderSignal(QThread):
     CreateMarketOrder = pyqtSignal(str, str, int, int, str)
     CreateLimitOrder = pyqtSignal(str, str, int, int, str)
-    EditOrder = pyqtSignal(str, str, str, int, int, bool, str)
-    CancelOrder = pyqtSignal(str, str, int, bool, str, int)
+    EditOrder = pyqtSignal(str, str, str, int, int, bool, str, str)
+    CancelOrder = pyqtSignal(str, str, int, bool, str, int, str, str)
 
     def __init__(self, main):
         super().__init__()
@@ -29,14 +29,21 @@ class OrderSignal(QThread):
                 continue
 
             data = self.main.OrderQ.get()
-            print(data)
-
-            if len(data) == 6:
-                stockCode, side, orderType, orderPrice, orderQty, signalName = data
+            orderGubun = data[0]
+            if orderGubun == 'new':
+                stockCode, side, orderType, orderPrice, orderQty, signalName = data[1], data[2], data[3], data[4], data[5], data[6]
                 if orderType == 'market':
                     self.CreateMarketOrder.emit(stockCode, side, orderPrice, orderQty, signalName)
                 elif orderType == 'limit':
                     self.CreateLimitOrder.emit(stockCode, side, orderPrice, orderQty, signalName)
+
+            elif orderGubun == 'modify':
+                orgID, buyorderID, orderType, orderPrice, orderQty, total, signalName, side = data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8]
+                self.EditOrder.emit(orgID, buyorderID, orderType, orderPrice, orderQty, total, signalName, side)
+
+            elif orderGubun == 'cancel':
+                orgID, orderID, orderQty, total, orderType, orderPrice, signalName, side = data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8]
+                self.CancelOrder.emit(orgID, orderID, orderQty, total, orderType, orderPrice)
 
 class Order:
     def __init__(self, subStocks, stg_option, Qlist, managerList, account_data):
@@ -71,17 +78,6 @@ class Order:
             mock = self.motoo
             )
 
-        self.BalanceManagerUpdate()
-        app = QApplication(sys.argv)
-
-        self.logger = Logger.Logger()
-        self.orderSignal = OrderSignal(self)
-        self.orderSignal.CreateMarketOrder.connect(self.CreateMarketOrder)
-        self.orderSignal.CreateLimitOrder.connect(self.CreateLimitOrder)
-        self.orderSignal.start()
-
-        app.exec_()
-
         if self.motoo == False:
             self.base_url = 'https://openapi.koreainvestment.com:9443'
         else:
@@ -93,7 +89,17 @@ class Order:
                 self.access_token = f'Bearer {data["access_token"]}'
         except:
             self.GetAccessToken()
-            # pass
+
+        self.BalanceManagerUpdate()
+        app = QApplication(sys.argv)
+
+        self.logger = Logger.Logger()
+        self.orderSignal = OrderSignal(self)
+        self.orderSignal.CreateMarketOrder.connect(self.CreateMarketOrder)
+        self.orderSignal.CreateLimitOrder.connect(self.CreateLimitOrder)
+        self.orderSignal.start()
+
+        app.exec_()
 
     def BalanceManagerUpdate(self):
         resp = self.BalanceInfo()
@@ -148,6 +154,7 @@ class Order:
 
             TradingManager_update = self.TradingManager[stockCode]
             TradingManager_update[f'{side}주문번호'] = orderID
+            TradingManager_update[f'{side}주문시간'] = datetime.datetime.now()
             self.TradingManager.update({stockCode : TradingManager_update})
 
             if orderID not in self.OrderManager.keys():
@@ -206,6 +213,7 @@ class Order:
 
             TradingManager_update = self.TradingManager[stockCode]
             TradingManager_update[f'{side}주문번호'] = orderID
+            TradingManager_update[f'{side}주문시간'] = datetime.datetime.now()
             self.TradingManager.update({stockCode : TradingManager_update})
 
             if orderID not in self.OrderManager.keys():
@@ -230,7 +238,7 @@ class Order:
                     self.BalanceManager.update({key: value})
                 pprint.pprint(dict(self.BalanceManager))
 
-    def ModifyOrder(self, orgID, orderID, orderType, orderPrice, orderQty, total, signalName):
+    def ModifyOrder(self, orgID, orderID, orderType, orderPrice, orderQty, total, signalName, side):
         """
         :param orgID: 주식일별주문체결조회 API output1의 odno(주문번호) 값 입력, 주문시 한국투자증권 시스템에서 채번된 주문번호
         :param orderID:
@@ -262,7 +270,7 @@ class Order:
             orderID = str(int(resp['output']['ODNO']))
             orderComID = str(int(resp['output']['KRX_FWDG_ORD_ORGNO']))
 
-            result = dict(주문시각=orderTime, 주문번호=orderID, 한국거래소전송주문조직번호=orderComID, 매수도구분='',
+            result = dict(주문시각=orderTime, 주문번호=orderID, 한국거래소전송주문조직번호=orderComID, 매수도구분=side,
                           종목코드=stockCode, 주문가격=orderPrice, 주문수량=orderQty, 주문명=signalName, 주문구분=orderType)
 
             self.logger.add_log(result, f'{self.stg_name}_주문내역')
@@ -270,7 +278,7 @@ class Order:
             TradingManager_update = self.TradingManager[stockCode]
 
             TradingManager_update[
-                f'{self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]["매수도구분"]}주문번호'] = orderID
+                f'{self.OrderManager[self.TradingManager[stockCode][f"{side}주문번호"]]["매수도구분"]}주문번호'] = orderID
             self.TradingManager.update({stockCode: TradingManager_update})
 
             if orderID not in self.OrderManager.keys():
@@ -340,21 +348,15 @@ class Order:
 
         return data
 
-def get_key(motoo: bool):
+def get_key(stg_name):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
 
-    if motoo == True:
-        keyword = '모투'
-    else:
-        keyword = '실투'
-
-    app_key = config[keyword]['app_key']
-    secret_key = config[keyword]['secret_key']
-    acc_num = config[keyword]['acc_num']
-    id = config[keyword]['id']
-
-    return app_key, secret_key, acc_num, id, motoo
+    app_key = config[stg_name]['app_key']
+    secret_key = config[stg_name]['secret_key']
+    acc_num = config[stg_name]['acc_num']
+    id = config[stg_name]['id']
+    return app_key, secret_key, acc_num, id
 
 if __name__ == '__main__':
 
@@ -367,11 +369,22 @@ if __name__ == '__main__':
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
+    stg_name = '테스트전략'
     motoo = True
-    app_key, secret_key, acc_num, id, motoo = get_key(motoo = True)
+    subStocks = ['122630']
+    totalBetSize = 100  # 총자산대비 투자비중
+    maxCnt = 10  # 최대 보유종목수
+    buyOption = 'atmarket'  # 매수옵션
+    sellOption = 'atmarket'  # 매도옵션
+    rebal = 3  # 리밸런싱 기간
+    fee = 0.26  # 수수료
 
+    stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
+                      매도옵션=sellOption)
+
+    app_key, secret_key, acc_num, id = get_key(stg_name)
     account_data = [app_key, secret_key, acc_num, id, motoo]
 
-    a = Order(qlist, managerlist, account_data, '테스트')
+    a = Order(subStocks, stg_option, qlist, managerlist, account_data)
     print(a)
 
