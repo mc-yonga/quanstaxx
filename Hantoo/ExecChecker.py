@@ -1,21 +1,12 @@
 import os
-import traceback
-
-import websockets
-import asyncio
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
-from base64 import b64decode
 from multiprocessing import *
 import Logger
 import configparser
-import requests
 import json
 from PyQt5.QtTest import *
 import datetime
 import pprint
 from pandas.tseries.offsets import BDay
-import pandas as pd
 
 config = configparser.ConfigParser()
 config.read('config.ini', encoding='UTF-8')
@@ -47,10 +38,10 @@ class Checker:
 
         self.stg_option = stg_option
         self.stg_name = self.stg_option['전략명']
+        self.subStocks = subStocks
 
         self.logger = Logger.Logger()
         self.ExecChecker()
-
 
     def ExecChecker(self):
         while True:
@@ -104,8 +95,16 @@ class Checker:
 
             if self.ExecManager[orderID]['미체결수량'] == 0:
 
-                if stockCode not in self.PositionManager.keys():  # 감시종목이 아닌 종목의 체결데이터가 오면 continue
+                if stockCode not in self.subStocks:  # 감시종목이 아닌 종목의 체결데이터가 오면 텔레그램 시그널만 발송함
+                    tele_msg = f"[매수 (감시종목아님)]\n" \
+                               f"- 시간 : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n" \
+                               f"- 전략이름 : {self.stg_name}\n" \
+                               f"- 종목코드 : {stockCode}\n" \
+                               f"- 매수가격 : {self.PositionManager[stockCode]['평균매수가격']}\n" \
+                               f"- 매수수량 : {self.PositionManager[stockCode]['보유수량']}\n"
+                    self.logger.telegram_bot('에러봇', tele_msg)
                     continue
+
                 PositionManager_update = self.PositionManager[stockCode]
                 if side == '02':  # 매수
                     PositionManager_update['평균매수가격'] = self.ExecManager[orderID]['평균체결가격']
