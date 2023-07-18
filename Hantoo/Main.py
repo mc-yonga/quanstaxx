@@ -4,19 +4,18 @@ from PyQt5.QtCore import *
 import configparser
 from multiprocessing import *
 import pprint
-from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import Token
 import quantbox
 from pykrx import stock
 import pandas as pd
-import datetime
 
 import Receiver
 import ExecChecker
-import STG1
+import Strategy
 import Order
 import json
+import numpy as np
 
 
 class Main(QMainWindow):
@@ -99,7 +98,8 @@ class Main(QMainWindow):
         for stockCode in self.PositionManager.keys():
             buyQty = self.PositionManager[stockCode]['보유수량']
             if buyQty > 0:
-                self.order.CreateMarketOrder('매도', stockCode, buyQty, f'{self.stg_name}')
+                signalName = '전량청산'
+                self.OrderQ.put((stockCode, '매도', 'market',0, self.PositionManager[stockCode]['보유수량'], signalName))
 
     def btn6(self):
         pprint.pprint(dict(self.BalanceManager))
@@ -113,25 +113,12 @@ class Main(QMainWindow):
 
     def btn9(self):
         print('테스트매수')
-        try:
-            self.OrderQ.put(('122630', '매수', 'market', 0, 10, '테스트'))
-            TradingManager_update = self.TradingManager['305540']
-            TradingManager_update['매수주문여부'] = True
-            TradingManager_update['매수주문시간'] = datetime.datetime.now()
-            self.TradingManager.update({'305540': TradingManager_update})
-        except Exception as e:
-            print(e)
+        self.OrderQ.put(('test', '122630', '매수', 'market', 0, 10, '테스트'))
+
 
     def btn11(self):
         print('테스트매도')
-        try:
-            self.OrderQ.put(('122630', '매도', 'market', 0, 10, '테스트'))
-            TradingManager_update = self.TradingManager['305540']
-            TradingManager_update['매도주문여부'] = True
-            TradingManager_update['매도주문시간'] = datetime.datetime.now()
-            self.TradingManager.update({'305540': TradingManager_update})
-        except Exception as e:
-            print(e)
+        self.OrderQ.put(('test', '122630', '매도', 'market', 0, 10, '테스트'))
 
     def btn10(self):
         os.remove(f'log/{self.stg_name}_보유현황.json', )
@@ -146,16 +133,13 @@ class Main(QMainWindow):
 
         print('포지션매니저 초기화 완료')
 
-def get_key(motoo: bool):
+def get_key(stg_name):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
-
-    if motoo == True: a = '모투'
-    else: a = '실투'
-    app_key = config[a]['app_key']
-    secret_key = config[a]['secret_key']
-    acc_num = config[a]['acc_num']
-    id = config[a]['id']
+    app_key = config[stg_name]['app_key']
+    secret_key = config[stg_name]['secret_key']
+    acc_num = config[stg_name]['acc_num']
+    id = config[stg_name]['id']
     return app_key, secret_key, acc_num, id
 
 def QuitAPP(app):
@@ -196,8 +180,8 @@ def GetHoldingList(stg_name):
 
 if __name__ == '__main__':
 
+    stg_name = '테스트전략'
     motoo = True
-    Token.Token(motoo).get_access_token()  # 토큰부터 업데이트,
 
     buyCond_id = 'c94aab2a2abc4f889d4eeba5af6cfcc9'
     sellCond_id = '950dd29001c2447e836fe24e86789c9d'
@@ -205,31 +189,55 @@ if __name__ == '__main__':
     frdate = '20230701'
     todate = '20230731'
 
-    stg_name = '에러봇'  # 전략이름
     totalBetSize = 100  # 총자산대비 투자비중
     maxCnt = 10  # 최대 보유종목수
     buyOption = 'atmarket'  # 매수옵션
     sellOption = 'atmarket'  # 매도옵션
-    target = 10  # 목표가
-    loss = 10  # 손절가
-    rebal = 10  # 리밸런싱 기간
+    rebal = 3  # 리밸런싱 기간
     fee = 0.26  # 수수료
 
     stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
-                      매도옵션=sellOption, 목표가=target, 손절가=loss)
+                      매도옵션=sellOption)
+
     print('===== 투자전략 분석중 =====')
-    subStocks = ['122630','305540']
-    # buyList = GetHoldingList(stg_name)
-    # if len(buyList) == 0:
-    #     subStocks = CreateUniverse(frdate, todate, buyCond_id, universe=[])
-    # else:
-    #     subStocks = buyList
-    #### 보유종목이 있으면 그 종목들을 구독함
-    #### 보유종목이 없으면 윗 아이디로 매수조건을 충족하는 종목들을 구독함
+
+    # subStocks = ['122630','305540']   #### 테스트 코드
+    # exitList = subStocks.copy()       #### 테스트 코드드
+
+    HoldingList = GetHoldingList(stg_name)
+    if len(HoldingList) == 0:
+        TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
+        exitList = []
+        availcnt = stg_option['최대보유종목수']
+        addStocks = np.random.choice(TradingList, availcnt, replace = False)    # 보유종목수가 0개면 매수조건을 충족하는 종목중에서 최대보유종목수만큼 랜덤으로 매수종목을 지정
+
+    elif stg_option['최대보유종목수'] > len(HoldingList) and len(HoldingList) > 0:
+        exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
+        TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
+        availcnt = stg_option['최대보유종목수'] - len(HoldingList)
+        addStocks = np.random.choice(TradingList, availcnt, replace = False)    # 보유종목수가 최대보유종목수보다 적으면 매수조건을 충족하는 종목중에서 n개의 신규종목을 편입
+
+    elif stg_option['최대보유종목수'] == len(HoldingList) and len(HoldingList)> 0:
+        exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
+        TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
+        addStocks = []  # 최대보유종목수와 현재 보유종목수가 같으면 신규편입종목은 없음
+
+    TotalSubStocks = TradingList + addStocks + exitList
+    TotalSubStocks = list(set(TotalSubStocks))
+
+    # TradingList : 매수해야 하는 종목 리스트
+    # addStocks : 현재 보유종목수가 최대보유종목수보다 적으면 신규종목을 편입
+    # exitList : 현재 보유종목중에 매도조건을 충족하여 청산해야 하는 종목리스트
+
+    # 보유종목이 있으면 그 종목들을 구독함
+    # 보유종목이 없으면 윗 아이디로 매수조건을 충족하는 종목들을 구독함
 
     print('===== 투자전략 분석 완료 =====')
 
-    print(f'구독 종목 리스트 >> {subStocks}')
+    print(f'구독 종목 리스트 >> {TotalSubStocks}')
+    print(f'청산 종목 리스트 >> {exitList}')
+
+    Token.Token(stg_name).get_access_token()  # 토큰부터 업데이트
 
     PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ = \
         Queue(), Queue(), Queue(), Queue(), Queue()
@@ -240,16 +248,16 @@ if __name__ == '__main__':
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
-    app_key, secret_key, acc_num, id = get_key(motoo)
+    app_key, secret_key, acc_num, id = get_key(stg_name)
     account_data = [app_key, secret_key, acc_num, id, motoo]
 
     app = QApplication(sys.argv)
     a = Main(stg_option, qlist, managerlist, account_data)
     a.show()
 
-    pcs1 = Process(target = Receiver.Receiver, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon = True).start()
-    pcs3 = Process(target = ExecChecker.Checker, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
-    pcs4 = Process(target = Order.Order, args = (subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
-    pcs2 = Process(target=STG1.Strategy, args=(subStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
+    pcs1 = Process(target = Receiver.Receiver, args = (TotalSubStocks, stg_option, qlist, managerlist, account_data), daemon = True).start()
+    pcs3 = Process(target = ExecChecker.Checker, args = (TotalSubStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
+    pcs4 = Process(target = Order.Order, args = (TotalSubStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
+    pcs2 = Process(target = Strategy.Strategy, args=(TotalSubStocks, exitList, stg_option, qlist, managerlist, account_data), daemon=True).start()
 
     app.exec_()
