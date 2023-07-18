@@ -46,7 +46,7 @@ class OrderSignal(QThread):
                 self.CancelOrder.emit(orgID, orderID, orderQty, total, orderType, orderPrice)
 
 class Order:
-    def __init__(self, subStocks, stg_option, Qlist, managerList, account_data):
+    def __init__(self, TotalSubStocks, stg_option, Qlist, managerList, account_data):
 
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
