@@ -208,14 +208,15 @@ if __name__ == '__main__':
     if len(HoldingList) == 0:
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
         exitList = []
-        availcnt = stg_option['최대보유종목수']
-        addStocks = np.random.choice(TradingList, availcnt, replace = False)    # 보유종목수가 0개면 매수조건을 충족하는 종목중에서 최대보유종목수만큼 랜덤으로 매수종목을 지정
+        availcnt = min(stg_option['최대보유종목수'], len(TradingList))
+        addStocks = list(np.random.choice(TradingList, availcnt, replace = False))    # 보유종목수가 0개면 매수조건을 충족하는 종목중에서 최대보유종목수만큼 랜덤으로 매수종목을 지정
 
     elif stg_option['최대보유종목수'] > len(HoldingList) and len(HoldingList) > 0:
         exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
         availcnt = stg_option['최대보유종목수'] - len(HoldingList)
-        addStocks = np.random.choice(TradingList, availcnt, replace = False)    # 보유종목수가 최대보유종목수보다 적으면 매수조건을 충족하는 종목중에서 n개의 신규종목을 편입
+        addStocks = list(np.random.choice(TradingList, availcnt, replace = False))    # 보유종목수가 최대보유종목수보다 적으면 매수조건을 충족하는 종목중에서 n개의 신규종목을 편입
+
 
     elif stg_option['최대보유종목수'] == len(HoldingList) and len(HoldingList)> 0:
         exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
