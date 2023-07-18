@@ -7,8 +7,6 @@ from Crypto.Util.Padding import unpad
 from base64 import b64decode
 from multiprocessing import *
 from Logger import *
-import datetime
-import pprint
 import traceback
 
 clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
@@ -99,7 +97,7 @@ def OrderExecData(data, key, iv):
     return data_list
 
 class Receiver:
-    def __init__(self,subsStocks, stg_option, Qlist, managerList, account_data):
+    def __init__(self,TotalSubStocks, stg_option, Qlist, managerList, account_data):
 
         print('===== Receiver Start =====')
 
@@ -122,7 +120,7 @@ class Receiver:
         self.PositionManager = managerList[4]
         self.BalanceManager = managerList[5]
         self.TradingManager = managerList[6]
-        self.subsStocks = subsStocks
+        self.subsStocks = TotalSubStocks
 
         # self.stg_name = stg_option['전략명']
         self.logger = Logger()
