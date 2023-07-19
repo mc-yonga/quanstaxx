@@ -142,7 +142,7 @@ class Strategy:
             dongsihoga = '152000'
             market_end = '153000'
 
-            availHoldCnt = self.stg_name['최대보유종목수']
+            availHoldCnt = self.stg_option['최대보유종목수']
 
             if self.PriceQ.empty():
                 continue
@@ -161,10 +161,10 @@ class Strategy:
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == 'atmarket' and stockCode not in self.ExitList:
                     ### 매수옵션이 atmarket 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
-                    if self.BalanceManager['순자산금액'] < self.BalanceManager['총평가금액'] / len(self.subStocks()):
+                    if self.BalanceManager['순자산금액'] < self.BalanceManager['총평가금액'] / len(self.subStocks):
                         print('[장전 시가매수] 순자산금액이 부족하여 시가매수를 할 수 없음')
                     else:
-                        orderQty = (self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice - 1
+                        orderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
                         signalName = '장전시가매수'
                         self.OrderQ.put(('new', stockCode, '매수', 'market', 0, orderQty, signalName))
                         TradingManager_update = self.TradingManager[stockCode]
@@ -178,11 +178,12 @@ class Strategy:
                     if expacPrice != self.PriceManger[stockCode]['예상체결가'] and self.PriceManger[stockCode]['예상체결가'] != 0: ### 예상체결가격이 변했으면 주문수량을 정정해야 함
                         orderID = self.TradingManager[stockCode]['매수주문번호']
                         orgID = self.OrderManager[orderID]["한국거래소전송주문조직번호"]
-                        adj_OrderQty = (self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice - 1
+                        adj_OrderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
                         signalName = '장전매수주문수정'
                         side = '매수'
-                        self.OrderQ.put(('modify', orgID, orderID, '01', 0, adj_OrderQty, True, signalName, side))  ### '01'은 시장가,
-                        print(f'[시가매수 정정] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, {self.OrderManager[orderID]["주문수량"]} >> {adj_OrderQty} 주문수량 수정')
+                        if adj_OrderQty != self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]['주문수량']: ### 수정주문수량이 직전 주문수량과 다르면 정정주문 넣기
+                            self.OrderQ.put(('modify', orgID, orderID, '01', 0, adj_OrderQty, True, signalName, side))  ### '01'은 시장가,
+                            print(f'[시가매수 정정] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, {self.OrderManager[orderID]["주문수량"]} >> {adj_OrderQty} 주문수량 수정')
 
                     elif self.TradingManager[stockCode]['매수주문번호'] in self.OrderManager.keys():
                         orderQty = self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]['주문수량']
@@ -224,14 +225,13 @@ class Strategy:
                 daylow = abs(float(data['당일저가']))
                 currentPrice = abs(float(data['현재가']))
 
-                print(f'종목코드 >> {stockCode}, 시가 >> {dayopen}, 고가 >> {dayhigh}, 저가 >> {daylow}, 종가 >> {currentPrice}')
-
                 if self.TradingManager[stockCode]['매수주문여부'] == False and self.stg_option['매수옵션'] == 'atmarket' and stockCode not in self.BuyList and stockCode not in self.ExitList:   ### 시가매수 못했을 때
-                    orderQty = (self.BalanceManager['총평가금액']/ len(self.TradingManager.keys())) / currentPrice - 1
+                    orderQty = round((self.BalanceManager['총평가금액'] / len(self.subStocks)) / currentPrice) - 1
                     signalName = '장중신규매수'
                     self.OrderQ.put(('new', stockCode, '매수', 'market', 0, orderQty, signalName))
                     TradingManager_update = self.TradingManager[stockCode]
                     TradingManager_update['매수주문여부'] = True
+                    self.TradingManager.update({stockCode: TradingManager_update})
                     print(f'[장중 시가매수] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 주문수량 : {orderQty}')
 
                 elif stockCode not in self.BuyList and self.TradingManager[stockCode]['매수주문여부'] == True and self.TradingManager[stockCode]['매수주문번호'] in self.OrderManager.keys():
@@ -313,10 +313,10 @@ class Strategy:
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == 'onclose' and stockCode not in self.ExitList:
                     ### 매수옵션이 atmarket 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
-                    if self.BalanceManager['순자산금액'] < self.BalanceManager['총평가금액'] / len(self.subStocks()):
+                    if self.BalanceManager['순자산금액'] < self.BalanceManager['총평가금액'] / len(self.subStocks):
                         print('[동시호가] 순자산금액이 부족하여 종가매수를 할 수 없음')
                     else:
-                        orderQty = (self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice - 1
+                        orderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
                         signalName = '종가매수'
                         self.OrderQ.put(('new', stockCode, '매수', 'market', 0, orderQty, signalName))
                         TradingManager_update = self.TradingManager[stockCode]
@@ -330,11 +330,12 @@ class Strategy:
                     if expacPrice != self.PriceManger[stockCode]['예상체결가'] and self.PriceManger[stockCode]['예상체결가'] != 0: ### 예상체결가격이 변했으면 주문수량을 정정해야 함
                         orderID = self.TradingManager[stockCode]['매수주문번호']
                         orgID = self.OrderManager[orderID]["한국거래소전송주문조직번호"]
-                        adj_OrderQty = (self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice - 1
+                        adj_OrderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
                         signalName = '장마감 매수주문수정'
                         side = '매수'
-                        self.OrderQ.put(('modify', orgID, orderID, '01', 0, adj_OrderQty, True, signalName, side))  ### '01'은 시장가,
-                        print(f'[종가매수 정정] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, {self.OrderManager[orderID]["주문수량"]} >> {adj_OrderQty} 주문수량 수정')
+                        if adj_OrderQty != self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]['주문수량']:
+                            self.OrderQ.put(('modify', orgID, orderID, '01', 0, adj_OrderQty, True, signalName, side))  ### '01'은 시장가,
+                            print(f'[종가매수 정정] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, {self.OrderManager[orderID]["주문수량"]} >> {adj_OrderQty} 주문수량 수정')
 
                     elif self.TradingManager[stockCode]['매수주문번호'] in self.OrderManager.keys():
                         orderQty = self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]['주문수량']
@@ -365,6 +366,7 @@ class Strategy:
                     print(f'[동시호가] 종목코드 >> {stockCode}, 예상체결가 >> {expacPrice}, 예상체결수량 >> {expacQty}')
 
             self.PriceManger.update({stockCode : PriceManager_update})
+
 
 
 def get_key(motoo: bool):
