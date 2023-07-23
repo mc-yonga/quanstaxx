@@ -151,7 +151,9 @@ def getData(frdate, todate, witID, universe = []):
     id = config['퀀트박스']['ID']
     pw = config['퀀트박스']['PW']
     quantbox.set_credentials(id, pw)
-    data = quantbox.get_wit(witID, from_date=frdate, to_date=todate, stock_codes=universe)['result'][witID]
+    data = quantbox.get_wit(witID, from_date=frdate, to_date=todate, stock_codes=universe)['result']
+    print(data)
+    data = data[witID]
     bsDate = stock.get_previous_business_days(fromdate=data.index[0], todate=data.index[-1])
     data.index = pd.to_datetime(data.index)
 
