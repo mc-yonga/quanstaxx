@@ -82,17 +82,9 @@ class Strategy:
         dayclose = quantbox.get_wit(dayclose_id, from_date = frdate, to_date = todate, stock_codes=self.subStocks)['result'][dayclose_id]
         dayvolume = quantbox.get_wit(dayvolume_id, from_date=frdate, to_date=todate, stock_codes=self.subStocks)['result'][dayvolume_id]
 
-        print(dayopen)
-        print(dayhigh)
-        print(daylow)
-        print(dayclose)
-        print(dayvolume)
-
         self.PriceManger.update({x : dict(전일시가 = dayopen.iloc[-1][x], 전일고가 = dayhigh.iloc[-1][x], 전일저가 = daylow.iloc[-1][x], 전일종가 = dayclose.iloc[-1][x], 전일거래량 = dayvolume.iloc[-1][x],
                                           당일시가 = 0, 당일고가 = 0, 당일저가 = 0, 현재가 = 0)
                                  for x in self.subStocks})
-
-        self.PriceManger.update({x: dict(전일시가=1, 전일고가=1, 전일저가=1,전일종가=1, 전일거래량=1,당일시가=0, 당일고가=0, 당일저가=0, 현재가=0)for x in self.subStocks})
 
         print('===== Price Manager Update Done =====')
         pprint.pprint(dict(self.PriceManger))
