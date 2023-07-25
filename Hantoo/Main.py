@@ -16,7 +16,7 @@ import Strategy
 import Order
 import json
 import numpy as np
-
+from apscheduler.schedulers.background import BackgroundScheduler
 
 class Main(QMainWindow):
     def __init__(self, stg_option, Qlist, managerList, account_data):
@@ -262,5 +262,10 @@ if __name__ == '__main__':
     pcs3 = Process(target = ExecChecker.Checker, args = (TotalSubStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
     pcs4 = Process(target = Order.Order, args = (TotalSubStocks, stg_option, qlist, managerlist, account_data), daemon=True).start()
     pcs2 = Process(target = Strategy.Strategy, args=(TotalSubStocks, exitList, stg_option, qlist, managerlist, account_data), daemon=True).start()
+
+    schedular = BackgroundScheduler(timezone='Asia/Seoul', job_defaults={'max_instances': 10})
+    schedular.start()
+    schedular.add_job(QuitAPP, args = (app, ), trigger='cron', hour = '15', minute = '32')
+
 
     app.exec_()
