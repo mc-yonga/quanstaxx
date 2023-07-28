@@ -153,7 +153,7 @@ class Strategy:
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == 'atmarket' and stockCode not in self.ExitList:
                     ### 매수옵션이 atmarket 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
-                    if self.BalanceManager['순자산금액'] < self.BalanceManager['총평가금액'] / len(self.subStocks):
+                    if self.BalanceManager['순자산금액'] < (self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks):
                         print('[장전 시가매수] 순자산금액이 부족하여 시가매수를 할 수 없음')
                     else:
                         orderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
@@ -170,7 +170,7 @@ class Strategy:
                     if expacPrice != self.PriceManger[stockCode]['예상체결가'] and self.PriceManger[stockCode]['예상체결가'] != 0: ### 예상체결가격이 변했으면 주문수량을 정정해야 함
                         orderID = self.TradingManager[stockCode]['매수주문번호']
                         orgID = self.OrderManager[orderID]["한국거래소전송주문조직번호"]
-                        adj_OrderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
+                        adj_OrderQty = round(((self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / availHoldCnt) / expacPrice) - 1
                         signalName = '장전매수주문수정'
                         side = '매수'
                         if adj_OrderQty != self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]['주문수량']: ### 수정주문수량이 직전 주문수량과 다르면 정정주문 넣기
@@ -218,7 +218,7 @@ class Strategy:
                 currentPrice = abs(float(data['현재가']))
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and self.stg_option['매수옵션'] == 'atmarket' and stockCode not in self.BuyList and stockCode not in self.ExitList:   ### 시가매수 못했을 때
-                    orderQty = round((self.BalanceManager['총평가금액'] / len(self.subStocks)) / currentPrice) - 1
+                    orderQty = round(((self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks)) / currentPrice) - 1
                     signalName = '장중신규매수'
                     self.OrderQ.put(('new', stockCode, '매수', 'market', 0, orderQty, signalName))
                     TradingManager_update = self.TradingManager[stockCode]
@@ -305,10 +305,10 @@ class Strategy:
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == 'onclose' and stockCode not in self.ExitList:
                     ### 매수옵션이 atmarket 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
-                    if self.BalanceManager['순자산금액'] < self.BalanceManager['총평가금액'] / len(self.subStocks):
+                    if self.BalanceManager['순자산금액'] < (self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks):
                         print('[동시호가] 순자산금액이 부족하여 종가매수를 할 수 없음')
                     else:
-                        orderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
+                        orderQty = round(((self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / availHoldCnt) / expacPrice) - 1
                         signalName = '종가매수'
                         self.OrderQ.put(('new', stockCode, '매수', 'market', 0, orderQty, signalName))
                         TradingManager_update = self.TradingManager[stockCode]
@@ -322,7 +322,7 @@ class Strategy:
                     if expacPrice != self.PriceManger[stockCode]['예상체결가'] and self.PriceManger[stockCode]['예상체결가'] != 0: ### 예상체결가격이 변했으면 주문수량을 정정해야 함
                         orderID = self.TradingManager[stockCode]['매수주문번호']
                         orgID = self.OrderManager[orderID]["한국거래소전송주문조직번호"]
-                        adj_OrderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
+                        adj_OrderQty = round(((self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / availHoldCnt) / expacPrice) - 1
                         signalName = '장마감 매수주문수정'
                         side = '매수'
                         if adj_OrderQty != self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]['주문수량']:
