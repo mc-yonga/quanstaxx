@@ -9,7 +9,7 @@ import Token
 import quantbox
 from pykrx import stock
 import pandas as pd
-
+import datetime
 import Receiver
 import ExecChecker
 import Strategy
@@ -151,8 +151,7 @@ def getData(frdate, todate, witID, universe = []):
     id = config['퀀트박스']['ID']
     pw = config['퀀트박스']['PW']
     quantbox.set_credentials(id, pw)
-    data = quantbox.get_wit(witID, from_date=frdate, to_date=todate, stock_codes=universe)['result']
-    print(data)
+    data = quantbox.get_wit(witID, from_date = frdate, to_date = todate, stock_codes=universe)['result']
     data = data[witID]
     bsDate = stock.get_previous_business_days(fromdate=data.index[0], todate=data.index[-1])
     data.index = pd.to_datetime(data.index)
@@ -166,7 +165,7 @@ def CreateUniverse(frdate, todate, witID, universe):
 
 def GetHoldingList(stg_name):
     try:
-        with open(f'{stg_name}_보유현황.json' ,'r') as file:
+        with open(f'log/{stg_name}_보유현황.json' ,'r') as file:
             position = json.load(file)
         position = eval(position)
         codeList = position.keys()
@@ -185,17 +184,17 @@ if __name__ == '__main__':
     stg_name = '테스트전략'
     motoo = True
 
-    buyCond_id = 'c94aab2a2abc4f889d4eeba5af6cfcc9'
-    sellCond_id = '950dd29001c2447e836fe24e86789c9d'
+    buyCond_id = 'd6ed6393dc6248ada6d509bbf33a36f1'     # 거래량 500만주 이상 종목
+    sellCond_id = 'f2db790942c5407cb8cf2780fdb80529'
 
     frdate = '20230701'
-    todate = '20230731'
+    todate = datetime.datetime.today().strftime('%Y%m%d')   ### todate는 반드시 오늘 이전으로 설정해야함함
 
     totalBetSize = 100  # 총자산대비 투자비중
     maxCnt = 10  # 최대 보유종목수
     buyOption = 'atmarket'  # 매수옵션
     sellOption = 'atmarket'  # 매도옵션
-    rebal = 3  # 리밸런싱 기간
+    rebal = 2  # 리밸런싱 기간
     fee = 0.26  # 수수료
 
     stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
@@ -207,25 +206,26 @@ if __name__ == '__main__':
     # exitList = subStocks.copy()       #### 테스트 코드드
 
     HoldingList = GetHoldingList(stg_name)
+    print(f'보유종목수 >> {len(HoldingList)}')
     if len(HoldingList) == 0:
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
         exitList = []
         availcnt = min(stg_option['최대보유종목수'], len(TradingList))
-        addStocks = list(np.random.choice(TradingList, availcnt, replace = False))    # 보유종목수가 0개면 매수조건을 충족하는 종목중에서 최대보유종목수만큼 랜덤으로 매수종목을 지정
+        addStocks = list(np.random.choice(TradingList, min(len(TradingList), availcnt), replace = False))    # 보유종목수가 0개면 매수조건을 충족하는 종목중에서 최대보유종목수만큼 랜덤으로 매수종목을 지정
 
     elif stg_option['최대보유종목수'] > len(HoldingList) and len(HoldingList) > 0:
         exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
+        addStockHubo = list(set(TradingList) - set(HoldingList) - set(exitList))
         availcnt = stg_option['최대보유종목수'] - len(HoldingList)
-        addStocks = list(np.random.choice(TradingList, availcnt, replace = False))    # 보유종목수가 최대보유종목수보다 적으면 매수조건을 충족하는 종목중에서 n개의 신규종목을 편입
-
+        addStocks = list(np.random.choice(addStockHubo, min(len(TradingList), availcnt), replace = False))    # 보유종목수가 최대보유종목수보다 적으면 매수조건을 충족하는 종목중에서 n개의 신규종목을 편입
 
     elif stg_option['최대보유종목수'] == len(HoldingList) and len(HoldingList)> 0:
         exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
         addStocks = []  # 최대보유종목수와 현재 보유종목수가 같으면 신규편입종목은 없음
 
-    TotalSubStocks = TradingList + addStocks + exitList
+    TotalSubStocks = HoldingList + addStocks + exitList
     TotalSubStocks = list(set(TotalSubStocks))
 
     # TradingList : 매수해야 하는 종목 리스트
@@ -237,8 +237,9 @@ if __name__ == '__main__':
 
     print('===== 투자전략 분석 완료 =====')
 
-    print(f'구독 종목 리스트 >> {TotalSubStocks}')
-    print(f'청산 종목 리스트 >> {exitList}')
+    print(f'구독 종목 리스트 >> {sorted(TotalSubStocks)}')
+    print(f'청산 종목 리스트 >> {sorted(exitList)}')
+    print(f'추가 종목 리스트 >> {sorted(addStocks)}')
 
     Token.Token(stg_name).get_access_token()  # 토큰부터 업데이트
 
