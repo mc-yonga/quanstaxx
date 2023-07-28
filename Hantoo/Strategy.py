@@ -244,7 +244,7 @@ class Strategy:
                               f' 주문가격 : {self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]["주문가격"]},'
                               f' 주문수량 : {self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]["주문수량"]}')
 
-                elif self.TradingManager[stockCode]['매도주문여부'] == False and stockCode in self.ExitList and self.stg_option['매도옵션'] == 'atmarket':
+                elif self.TradingManager[stockCode]['매도주문여부'] == False and stockCode in self.ExitList and self.stg_option['매도옵션'] == 'atmarket' and stockCode in self.BuyList and self.PositionManager[stockCode]['매수날짜'] != datetime.datetime.now().strftime('%Y%m%d'):
                     signalName = '장중 조건부 매도'
                     self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
@@ -252,7 +252,7 @@ class Strategy:
                     self.TradingManager.update({stockCode: TradingManager_update})
                     print(f'[장중 조건부 매도] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 주문수량 : {self.PositionManager[stockCode]["보유수량"]}')
 
-                elif self.TradingManager[stockCode]['매도주문여부'] == False and self.PositionManager[stockCode]['매도예정날짜'] == now:
+                elif self.TradingManager[stockCode]['매도주문여부'] == False and self.PositionManager[stockCode]['매도예정날짜'] == now and stockCode in self.BuyList:
                     signalName = '장중 만기 매도'
                     self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
@@ -279,7 +279,7 @@ class Strategy:
                               f' 주문가격 : {self.OrderManager[self.TradingManager[stockCode]["매도주문번호"]]["주문가격"]},'
                               f' 주문수량 : {self.OrderManager[self.TradingManager[stockCode]["매도주문번호"]]["주문수량"]}')
 
-                elif stockCode in self.BuyList:
+                elif stockCode in self.BuyList and self.PositionManager[stockCode]['평균매수가격'] > 0:
                     profit = currentPrice / self.PositionManager[stockCode]["평균매수가격"] - 1
                     profit = round(profit, 4)
 
