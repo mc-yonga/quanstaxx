@@ -102,7 +102,7 @@ class Checker:
                                f"- 종목코드 : {stockCode}\n" \
                                f"- 매수가격 : {self.PositionManager[stockCode]['평균매수가격']}\n" \
                                f"- 매수수량 : {self.PositionManager[stockCode]['보유수량']}\n"
-                    self.logger.telegram_bot('에러봇', tele_msg)
+                    self.logger.telegram_bot(self.stg_name, tele_msg)
                     continue
 
                 PositionManager_update = self.PositionManager[stockCode]
