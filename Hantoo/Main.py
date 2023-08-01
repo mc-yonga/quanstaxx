@@ -181,13 +181,13 @@ def GetHoldingList(stg_name):
 
 if __name__ == '__main__':
 
-    stg_name = '테스트전략'
+    stg_name = '모의투자'  ## 모의투자
     motoo = True
 
     buyCond_id = 'd6ed6393dc6248ada6d509bbf33a36f1'     # 거래량 500만주 이상 종목
     sellCond_id = 'f2db790942c5407cb8cf2780fdb80529'
 
-    frdate = '20230701'
+    frdate = (datetime.datetime.now() - datetime.timedelta(days = 10)).strftime('%Y%m%d')
     todate = datetime.datetime.today().strftime('%Y%m%d')   ### todate는 반드시 오늘 이전으로 설정해야함함
 
     totalBetSize = 100  # 총자산대비 투자비중
