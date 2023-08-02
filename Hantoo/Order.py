@@ -133,7 +133,7 @@ class Order:
                        f'- 주문가격 : {orderPrice}\n' \
                        f'- 주문수량 : {orderQty}\n' \
                        f'- 오류메세지 : {resp["msg1"]}'
-            self.logger.telegram_bot('에러봇', tele_msg)
+            self.logger.telegram_bot(f'{self.stg_name}', tele_msg)
         else:
             order_time = resp['output']['ORD_TMD']
             adj_time2 = datetime.datetime.strptime(order_time,'%H%M%S')
@@ -193,7 +193,7 @@ class Order:
                        f'- 주문가격 : {orderPrice}\n' \
                        f'- 주문수량 : {orderQty}\n' \
                        f'- 오류메세지 : {resp["msg1"]}'
-            self.logger.telegram_bot('에러봇', tele_msg)
+            self.logger.telegram_bot(f'{self.stg_name}', tele_msg)
         else:
             order_time = resp['output']['ORD_TMD']
             adj_time2 = datetime.datetime.strptime(order_time,'%H%M%S')
@@ -260,7 +260,7 @@ class Order:
                        f'- 주문가격 : {orderPrice}\n' \
                        f'- 주문수량 : {orderQty}\n' \
                        f'- 오류메세지 : {resp["msg1"]}'
-            self.logger.telegram_bot('에러봇', tele_msg)
+            self.logger.telegram_bot(f'{self.stg_name}', tele_msg)
         else:
             order_time = resp['output']['ORD_TMD']
             adj_time2 = datetime.datetime.strptime(order_time, '%H%M%S')
