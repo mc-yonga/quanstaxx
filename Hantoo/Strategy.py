@@ -156,7 +156,7 @@ class Strategy:
                     if self.BalanceManager['순자산금액'] < (self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks):
                         print('[장전 시가매수] 순자산금액이 부족하여 시가매수를 할 수 없음')
                     else:
-                        orderQty = round((self.BalanceManager['총평가금액'] / availHoldCnt) / expacPrice) - 1
+                        orderQty = round(((self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / availHoldCnt) / expacPrice) - 1
                         signalName = '장전시가매수'
                         self.OrderQ.put(('new', stockCode, '매수', 'market', 0, orderQty, signalName))
                         TradingManager_update = self.TradingManager[stockCode]

@@ -197,7 +197,7 @@ if __name__ == '__main__':
     rebal = 2  # 리밸런싱 기간
     fee = 0.26  # 수수료
 
-    stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
+    stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize / 100, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
                       매도옵션=sellOption)
 
     print('===== 투자전략 분석중 =====')
