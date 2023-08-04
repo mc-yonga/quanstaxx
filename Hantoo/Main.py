@@ -181,6 +181,8 @@ def GetHoldingList(stg_name):
 
 if __name__ == '__main__':
 
+    os.remove('token.dat')
+
     stg_name = '모의투자'  ## 모의투자
     motoo = True
 
