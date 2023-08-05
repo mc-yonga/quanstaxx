@@ -63,5 +63,5 @@ class Token:
         return ACCESS_TOKEN
 
 if __name__ == '__main__':
-    stg_name = '테스트전략'
+    stg_name = '모의투자'
     Token(stg_name).get_access_token()
