@@ -151,8 +151,8 @@ class Strategy:
                 expacPrice = abs(float(data['예상체결가']))
                 expacQty = abs(float(data['예상체결수량']))
 
-                if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == 'atmarket' and stockCode not in self.ExitList:
-                    ### 매수옵션이 atmarket 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
+                if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == '시가' and stockCode not in self.ExitList:
+                    ### 매수옵션이 시가 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
                     if self.BalanceManager['순자산금액'] < (self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks):
                         print('[장전 시가매수] 순자산금액이 부족하여 시가매수를 할 수 없음')
                     else:
@@ -217,7 +217,7 @@ class Strategy:
                 daylow = abs(float(data['당일저가']))
                 currentPrice = abs(float(data['현재가']))
 
-                if self.TradingManager[stockCode]['매수주문여부'] == False and self.stg_option['매수옵션'] == 'atmarket' and stockCode not in self.BuyList and stockCode not in self.ExitList:   ### 시가매수 못했을 때
+                if self.TradingManager[stockCode]['매수주문여부'] == False and self.stg_option['매수옵션'] == '시가' and stockCode not in self.BuyList and stockCode not in self.ExitList:   ### 시가매수 못했을 때
                     orderQty = round(((self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks)) / currentPrice) - 1
                     signalName = '장중신규매수'
                     self.OrderQ.put(('new', stockCode, '매수', 'market', 0, orderQty, signalName))
@@ -244,7 +244,7 @@ class Strategy:
                               f' 주문가격 : {self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]["주문가격"]},'
                               f' 주문수량 : {self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]["주문수량"]}')
 
-                elif self.TradingManager[stockCode]['매도주문여부'] == False and stockCode in self.ExitList and self.stg_option['매도옵션'] == 'atmarket' and stockCode in self.BuyList and self.PositionManager[stockCode]['매수날짜'] != datetime.datetime.now().strftime('%Y%m%d'):
+                elif self.TradingManager[stockCode]['매도주문여부'] == False and stockCode in self.ExitList and self.stg_option['매도옵션'] == '시가' and stockCode in self.BuyList and self.PositionManager[stockCode]['매수날짜'] != datetime.datetime.now().strftime('%Y%m%d'):
                     signalName = '장중 조건부 매도'
                     self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
@@ -303,8 +303,8 @@ class Strategy:
                 expacPrice = abs(float(data['예상체결가']))
                 expacQty = abs(float(data['예상체결수량']))
 
-                if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == 'onclose' and stockCode not in self.ExitList:
-                    ### 매수옵션이 atmarket 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
+                if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == '종가' and stockCode not in self.ExitList:
+                    ### 매수옵션이 시가 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
                     if self.BalanceManager['순자산금액'] < (self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks):
                         print('[동시호가] 순자산금액이 부족하여 종가매수를 할 수 없음')
                     else:
@@ -394,8 +394,8 @@ if __name__ == '__main__':
     stg_name = '테스트'  # 전략이름
     totalBetSize = 100  # 총자산대비 투자비중
     maxCnt = 10  # 최대 보유종목수
-    buyOption = 'atmarket'  # 매수옵션
-    sellOption = 'atmarket'  # 매도옵션
+    buyOption = '시가'  # 매수옵션
+    sellOption = '시가'  # 매도옵션
     target = 10  # 목표가
     loss = 10  # 손절가
     rebal = 10  # 리밸런싱 기간

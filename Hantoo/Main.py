@@ -197,8 +197,8 @@ if __name__ == '__main__':
 
     totalBetSize = 100  # 총자산대비 투자비중
     maxCnt = 10  # 최대 보유종목수
-    buyOption = 'atmarket'  # 매수옵션
-    sellOption = 'atmarket'  # 매도옵션
+    buyOption = '시가'  # 매수옵션
+    sellOption = '시가'  # 매도옵션
     rebal = 2  # 리밸런싱 기간
     fee = 0.26  # 수수료
 
