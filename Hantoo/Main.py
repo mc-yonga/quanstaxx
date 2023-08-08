@@ -92,6 +92,7 @@ class Main(QMainWindow):
     def btn4(self):
         print('포지션매니저입니다')
         pprint.pprint(dict(self.PositionManager))
+        print(f'보유종목 리스트 >> {self.BuyList}')
 
     def btn5(self):
         print('전량청산시작')
