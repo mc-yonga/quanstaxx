@@ -98,8 +98,6 @@ def OrderExecData(data, key, iv):
 class Receiver:
     def __init__(self,TotalSubStocks, stg_option, Qlist, managerList, account_data):
 
-        print('===== Receiver Start =====')
-
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
         self.acc_num = account_data[2]
@@ -156,6 +154,8 @@ class Receiver:
         async with websockets.connect(url, ping_interval = None) as websocket:
             for send_data in send_data_list:
                 await websocket.send(send_data)
+
+            print('\n======================== Receiver Start ========================\n')
 
             while True:
                 if not websocket.open:
