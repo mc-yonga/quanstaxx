@@ -15,7 +15,6 @@ clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
 
 class Checker:
     def __init__(self, subStocks, stg_option, Qlist, managerList, account_data):
-        print('===== Exec Checker Start =====')
         self.app_key = account_data[0]
         self.secret_key = account_data[1]
         self.acc_num = account_data[2]
@@ -44,9 +43,11 @@ class Checker:
         self.ExecChecker()
 
     def ExecChecker(self):
-        while True:
-            resp = self.ExecQ.get()
+        print('\n======================== Exec Checker Start ========================\n')
 
+        while True:
+
+            resp = self.ExecQ.get()
             pprint.pprint(resp)
             self.logger.add_log(resp, f'{self.stg_name}_체결내역')
 
@@ -184,7 +185,6 @@ class Checker:
                     self.BalanceManager.update({'주문가능현금': self.BalanceManager['주문가능현금'] + profit_amount})
 
                     pprint.pprint(dict(self.BalanceManager))
-
 
 
 if __name__ == '__main__':
