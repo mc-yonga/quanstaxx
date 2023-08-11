@@ -160,8 +160,15 @@ def getData(frdate, todate, witID, universe = []):
     return data.loc[bsDate]
 
 def CreateUniverse(frdate, todate, witID, universe):
-    cond_df = getData(frdate, todate, witID, universe)
-    universe = cond_df[cond_df == True].iloc[-1].dropna()
+    while True:
+        try:
+            cond_df = getData(frdate, todate, witID, universe)
+            universe = cond_df[cond_df == True].iloc[-1].dropna()
+            break
+        except:
+            print('\n======================== 유니버스 재구성 ========================\n')
+            continue
+
     return list(universe.keys())
 
 def GetHoldingList(stg_name):
@@ -187,26 +194,28 @@ if __name__ == '__main__':
     except FileNotFoundError:
         pass
 
-    stg_name = '모의투자'  ## 모의투자
-    motoo = True
-
-    buyCond_id = 'd6ed6393dc6248ada6d509bbf33a36f1'     # 거래량 500만주 이상 종목
-    sellCond_id = 'f2db790942c5407cb8cf2780fdb80529'
-
     frdate = (datetime.datetime.now() - datetime.timedelta(days = 10)).strftime('%Y%m%d')
     todate = datetime.datetime.today().strftime('%Y%m%d')   ### todate는 반드시 오늘 이전으로 설정해야함함
 
-    totalBetSize = 100  # 총자산대비 투자비중
-    maxCnt = 10  # 최대 보유종목수
-    buyOption = '시가'  # 매수옵션
-    sellOption = '시가'  # 매도옵션
-    rebal = 2  # 리밸런싱 기간
-    fee = 0.26  # 수수료
+    config = configparser.ConfigParser()
+    config.read('config.ini', encoding='utf-8')
+    config = config['투자전략']
+    stg_name = config['전략이름']
+    buyCond_id = config['매수조건']
+    sellCond_id = config['매도조건']
+    motoo = config['모투']
+
+    totalBetSize = int(config['totalBetSize']) # 총자산대비 투자비중
+    maxCnt = int(config['maxCnt'])  # 최대 보유종목수
+    buyOption = config['buyOption']  # 매수옵션
+    sellOption = config['sellOption']  # 매도옵션
+    rebal = int(config['rebal'])  # 리밸런싱 기간
+    fee = float(config['fee'])  # 수수료
 
     stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize / 100, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
                       매도옵션=sellOption)
 
-    print('===== 투자전략 분석중 =====')
+    print('\n======================== 투자전략 분석중 ========================\n')
 
     # subStocks = ['122630','305540']   #### 테스트 코드
     # exitList = subStocks.copy()       #### 테스트 코드드
@@ -222,30 +231,30 @@ if __name__ == '__main__':
     elif stg_option['최대보유종목수'] > len(HoldingList) and len(HoldingList) > 0:
         exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
-        addStockHubo = list(set(TradingList) - set(HoldingList) - set(exitList))
+        addStockHubo = list(set(TradingList) - set(HoldingList + exitList))
         availcnt = stg_option['최대보유종목수'] - len(HoldingList)
+        print(f'트레이딩리스트 갯수 >> {len(TradingList)}, 매수가능갯수 >> {availcnt}, 후보군 갯수 >> {len(addStockHubo)}')
         addStocks = list(np.random.choice(addStockHubo, min(len(TradingList), availcnt), replace = False))    # 보유종목수가 최대보유종목수보다 적으면 매수조건을 충족하는 종목중에서 n개의 신규종목을 편입
 
     elif stg_option['최대보유종목수'] == len(HoldingList) and len(HoldingList)> 0:
         exitList = CreateUniverse(frdate, todate, sellCond_id, universe = HoldingList)
-        TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
-        addStocks = []  # 최대보유종목수와 현재 보유종목수가 같으면 신규편입종목은 없음
+        TradingList = [] # 신규로 편입할 종목수가 0개 이므로 매수조건을 충족하는 종목 리스트를 안가져와도 됌
+        addStocks = []  # 신규로 편입할 종목수가 0개
 
     TotalSubStocks = HoldingList + addStocks + exitList
     TotalSubStocks = list(set(TotalSubStocks))
 
-    # TradingList : 매수해야 하는 종목 리스트
-    # addStocks : 현재 보유종목수가 최대보유종목수보다 적으면 신규종목을 편입
-    # exitList : 현재 보유종목중에 매도조건을 충족하여 청산해야 하는 종목리스트
+    # HoldingList : 현재 보유중인 종목 리스트
+    # TradingList : 매수조건을 충족하는 종목 리스트
+    # addStocks : 현재 보유종목수가 최대보유종목수보다 적어서 신규로 편입할 예정인 종목 리스트
+    # exitList : 현재 보유종목중에 매도조건을 충족하여 청산해야 하는 종목 리스트
 
-    # 보유종목이 있으면 그 종목들을 구독함
-    # 보유종목이 없으면 윗 아이디로 매수조건을 충족하는 종목들을 구독함
 
-    print('===== 투자전략 분석 완료 =====')
+    print('\n======================== 투자전략 분석 완료 ========================\n')
 
-    print(f'구독 종목 리스트 >> {sorted(TotalSubStocks)}')
-    print(f'청산 종목 리스트 >> {sorted(exitList)}')
-    print(f'추가 종목 리스트 >> {sorted(addStocks)}')
+    print(f'보유종목 리스트 >> {HoldingList}')
+    print(f'청산종목 리스트 >> {sorted(exitList)}')
+    print(f'추가종목 리스트 >> {sorted(addStocks)}')
 
     Token.Token(stg_name).get_access_token()  # 토큰부터 업데이트
 
@@ -257,6 +266,9 @@ if __name__ == '__main__':
 
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
+
+    if motoo == '실투' : motoo = False
+    elif motoo == '모투' : motoo = True
 
     app_key, secret_key, acc_num, id = get_key(stg_name)
     account_data = [app_key, secret_key, acc_num, id, motoo]
