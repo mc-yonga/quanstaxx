@@ -152,8 +152,9 @@ def getData(frdate, todate, witID, universe = []):
     id = config['투자전략기본']['퀀트박스ID']
     pw = config['투자전략기본']['퀀트박스PW']
     quantbox.set_credentials(id, pw)
-    data = quantbox.get_wit(witID, from_date = frdate, to_date = todate, stock_codes=universe)['result']
-    data = data[witID]
+    data = quantbox.get_shared_wit(witID, from_date = frdate, to_date = todate, stock_codes=universe)
+    witID = list(data['result'].keys())[0]
+    data = data['result'][witID]
     bsDate = stock.get_previous_business_days(fromdate=data.index[0], todate=data.index[-1])
     data.index = pd.to_datetime(data.index)
 
