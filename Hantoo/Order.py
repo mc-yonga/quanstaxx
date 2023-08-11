@@ -23,7 +23,7 @@ class OrderSignal(QThread):
         self.main = main
 
     def run(self):
-        print('Order Signal Start')
+        print('\n======================== Order Signal Start ========================\n')
         while True:
             if self.main.OrderQ.empty():
                 continue
@@ -103,7 +103,7 @@ class Order:
 
     def BalanceManagerUpdate(self):
         resp = self.BalanceInfo()
-        pprint.pprint(resp)
+        # pprint.pprint(resp)
         for key, value in resp.items():
             self.BalanceManager.update({key : value})
         print('밸런스 매니저 업데이트 완료')
