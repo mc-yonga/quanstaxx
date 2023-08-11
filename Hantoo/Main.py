@@ -149,8 +149,8 @@ def QuitAPP(app):
 def getData(frdate, todate, witID, universe = []):
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
-    id = config['퀀트박스']['ID']
-    pw = config['퀀트박스']['PW']
+    id = config['투자전략기본']['퀀트박스ID']
+    pw = config['투자전략기본']['퀀트박스PW']
     quantbox.set_credentials(id, pw)
     data = quantbox.get_wit(witID, from_date = frdate, to_date = todate, stock_codes=universe)['result']
     data = data[witID]
@@ -199,18 +199,18 @@ if __name__ == '__main__':
 
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
-    config = config['투자전략']
-    stg_name = config['전략이름']
-    buyCond_id = config['매수조건']
-    sellCond_id = config['매도조건']
-    motoo = config['모투']
+    config_STG = config['투자전략상세']
+    stg_name = config_STG['전략이름']
+    buyCond_id = config_STG['매수조건']
+    sellCond_id = config_STG['매도조건']
+    motoo_gubun = config_STG['모투실투구분']
 
-    totalBetSize = int(config['totalBetSize']) # 총자산대비 투자비중
-    maxCnt = int(config['maxCnt'])  # 최대 보유종목수
-    buyOption = config['buyOption']  # 매수옵션
-    sellOption = config['sellOption']  # 매도옵션
-    rebal = int(config['rebal'])  # 리밸런싱 기간
-    fee = float(config['fee'])  # 수수료
+    totalBetSize = int(config_STG['투자비중']) # 총자산대비 투자비중
+    maxCnt = int(config_STG['최대종목수'])  # 최대 보유종목수
+    buyOption = config_STG['매수옵션']  # 매수옵션
+    sellOption = config_STG['매도옵션']  # 매도옵션
+    rebal = int(config_STG['최대보유기간'])  # 리밸런싱 기간
+    fee = float(config_STG['수수료'])  # 수수료
 
     stg_option = dict(전략명=stg_name, 총자산대비투자비중=totalBetSize / 100, 최대보유종목수=maxCnt, 리밸런싱=rebal, 수수료=fee, 매수옵션=buyOption,
                       매도옵션=sellOption)
@@ -267,10 +267,11 @@ if __name__ == '__main__':
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
-    if motoo == '실투' : motoo = False
-    elif motoo == '모투' : motoo = True
+    if motoo_gubun == '실투' : motoo = False
+    elif motoo_gubun == '모투' : motoo = True
 
-    app_key, secret_key, acc_num, id = get_key(stg_name)
+    config_setting = config['투자전략기본']
+    app_key, secret_key, acc_num, id = config_setting['한투앱키'], config_setting['한투시크릿'], config_setting['한투계좌번호'], config_setting['한투아이디']
     account_data = [app_key, secret_key, acc_num, id, motoo]
 
     app = QApplication(sys.argv)

@@ -4,14 +4,14 @@ import mojito
 import requests
 import json
 
-def get_key(stg_name):
+def get_key():
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
 
-    app_key = config[stg_name]['app_key']
-    secret_key = config[stg_name]['secret_key']
-    acc_num = config[stg_name]['acc_num']
-    id = config[stg_name]['id']
+    app_key = config['투자전략기본']['한투앱키']
+    secret_key = config['투자전략기본']['한투시크릿']
+    acc_num = config['투자전략기본']['한투계좌번호']
+    id = config['투자전략기본']['한투아이디']
 
     return app_key, secret_key, acc_num, id
 
@@ -22,7 +22,7 @@ class Token:
         :param motoo: True or False
                 """
 
-        app_key, secret_key, acc_num, id = get_key(motoo)
+        app_key, secret_key, acc_num, id = get_key()
         print(acc_num, id)
         self.app_key = app_key
         self.secret_key = secret_key
