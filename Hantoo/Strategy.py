@@ -50,9 +50,9 @@ class Strategy:
             TradingManager_update['매도대상'] = True
             self.TradingManager.update({stockCode : TradingManager_update})
 
-        print('===== Trading Manager Update Done =====')
-        pprint.pprint(dict(self.TradingManager))
-        print('')
+        print('\n======================== Trading Manager Update Done ========================\n')
+        # pprint.pprint(dict(self.TradingManager))
+        # print('')
 
     def PriceManagerUpadate(self):
 
@@ -92,11 +92,11 @@ class Strategy:
         #                                   당일시가 = 0, 당일고가 = 0, 당일저가 = 0, 현재가 = 0)
         #                          for x in self.subStocks})
 
-        self.PriceManger.update({x : dict(당일시가 = 0, 당일고가 = 0, 당일저가 = 0, 현재가 = 0) for x in self.subStocks})
+        self.PriceManger.update({x : dict(당일시가 = 0, 당일고가 = 0, 당일저가 = 0, 현재가 = 0, 예상체결가 = 0) for x in self.subStocks})
 
-        print('===== Price Manager Update Done =====')
-        pprint.pprint(dict(self.PriceManger))
-        print('')
+        print('\n======================== Price Manager Update Done ========================\n')
+        # pprint.pprint(dict(self.PriceManger))
+        # print('')
 
     def PositionManagerUpdate(self):
         self.PositionManager.update({x : dict(평균매수가격 = 0, 보유수량 = 0, 주문번호 = 0, 종목명 = 0, 매수날짜 = None, 매도날짜 = None, 매수예정날짜 = None, 매도예정날짜 = None) for x in self.subStocks})
@@ -122,7 +122,7 @@ class Strategy:
                     PositionManager_update['매도예정날짜'] = position[stockCode]['매도예정날짜']
                     self.PositionManager.update({stockCode : PositionManager_update})
                     self.BuyList.append(stockCode)
-            pprint.pprint(dict(self.PositionManager))
+            # pprint.pprint(dict(self.PositionManager))
             print(f'보유리스트 >> {self.BuyList}')
 
         except FileNotFoundError:
@@ -131,11 +131,10 @@ class Strategy:
             print(traceback.format_exc())
             print('오류')
 
-        print('===== Position Manager Update Done =====')
-        pprint.pprint(dict(self.PositionManager))
+        print('\n========================Position Manager Update Done ========================\n')
 
     def Observer(self):
-        print('===== Observer Start =====')
+        print('\n======================== Observer Start ========================\n')
         while True:
             now = datetime.datetime.now().strftime('%H%M%S')
             market_start = '090000'
@@ -158,6 +157,9 @@ class Strategy:
 
                 expacPrice = abs(float(data['예상체결가']))
                 expacQty = abs(float(data['예상체결수량']))
+
+                if expacPrice == self.PriceManger[stockCode]['예상체결가']:
+                    continue
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == '시가' and stockCode not in self.ExitList:
                     ### 매수옵션이 시가 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
@@ -192,7 +194,7 @@ class Strategy:
                 elif stockCode in self.BuyList and self.TradingManager[stockCode]['매도주문여부'] == False and datetime.datetime.now().strftime('%Y%m%d') == self.PositionManager[stockCode]['매도예정날짜'] :  # 보유수량이 있는데 매도주문을 안걸었으면 시가매도
                     ### 보유기간 만기청산
                     signalName = '시가매도 만기청산'
-                    self.OrderQ.put((stockCode, '매도', 'market', 0, self.PositionManager[stockCode]["보유수량"], signalName))
+                    self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
                     TradingManager_update['매도주문여부'] = True
                     self.TradingManager.update({stockCode: TradingManager_update})
@@ -200,7 +202,7 @@ class Strategy:
 
                 elif stockCode in self.ExitList and self.TradingManager[stockCode]['매도주문여부'] == False:
                     signalName = '시가매도 조건부청산'
-                    self.OrderQ.put((stockCode, '매도', 'market', 0, self.PositionManager[stockCode]["보유수량"], signalName))
+                    self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
                     TradingManager_update['매도주문여부'] = True
                     self.TradingManager.update({stockCode: TradingManager_update})
@@ -211,7 +213,7 @@ class Strategy:
                     expacProfit = round(expacProfit * 100, 4)
                     print(f'[시가매도 대기] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 예상체결가격 : {expacPrice}, 예상수익률 : {expacProfit}%')
                 else:
-                    print(f'[개장전] 종목코드 >> {stockCode}, 전일고가 >> {self.PriceManger[stockCode]["전일고가"]}, 전일저가 >> {self.PriceManger[stockCode]["전일저가"]}')
+                    print(f'[개장전] 종목코드 >> {stockCode}, 예상체결가 >> {expacPrice}, 예상체결수량 >> {expacQty}')
 
                 PriceManager_update['예상체결가'] = expacPrice
                 PriceManager_update['예상체결수량'] = expacQty
@@ -224,6 +226,9 @@ class Strategy:
                 dayhigh = abs(float(data['당일고가']))
                 daylow = abs(float(data['당일저가']))
                 currentPrice = abs(float(data['현재가']))
+
+                if currentPrice == self.PriceManger[stockCode]['현재가']:
+                    continue
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and self.stg_option['매수옵션'] == '시가' and stockCode not in self.BuyList and stockCode not in self.ExitList:   ### 시가매수 못했을 때
                     orderQty = round(((self.BalanceManager['총평가금액'] * self.stg_option['총자산대비투자비중']) / len(self.subStocks)) / currentPrice) - 1
@@ -300,7 +305,9 @@ class Strategy:
                           f'청산예정일자 : {(self.PositionManager[stockCode]["매도예정날짜"])}')
 
                 elif self.stg_option['매수옵션'] == '종가':
-                    print(f'[매수대기중] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 >> {stockCode}, 현재가 >> {currentPrice}')
+                    print(f'[종가 매수대기중] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 >> {stockCode}, 현재가 >> {currentPrice}')
+                else:
+                    print(f'현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 >> {stockCode}, 현재가 >> {currentPrice}')
 
                 PriceManager_update['당일시가'] = dayopen
                 PriceManager_update['당일고가'] = dayhigh
@@ -313,6 +320,9 @@ class Strategy:
 
                 expacPrice = abs(float(data['예상체결가']))
                 expacQty = abs(float(data['예상체결수량']))
+
+                if expacPrice == self.PriceManger[stockCode]['예상체결가']:
+                    continue
 
                 if self.TradingManager[stockCode]['매수주문여부'] == False and stockCode not in self.BuyList and self.stg_option['매수옵션'] == '종가' and stockCode not in self.ExitList:
                     ### 매수옵션이 시가 이고 매수주문을 넣지 않았고 보유종목리스트에 포함되어있지 않고 청산리스트에도 포함되어있지 않으면 시가매수
