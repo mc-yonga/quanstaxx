@@ -59,7 +59,7 @@ def aes_cbc_base64_dec(key, iv, cipher_text):
         print(e)
         print(traceback.format_exc())
         Logger().add_log('', 'error')
-        Logger().telegram_bot('에러봇', '복호화 과정에서 에러발생')
+        Logger().telegram_bot('복호화 과정에서 에러발생')
 
 def get_approval(key, secret):
     """웹소켓 접속키 발급"""

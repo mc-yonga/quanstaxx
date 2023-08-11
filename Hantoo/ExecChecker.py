@@ -103,7 +103,7 @@ class Checker:
                                f"- 종목코드 : {stockCode}\n" \
                                f"- 매수가격 : {self.PositionManager[stockCode]['평균매수가격']}\n" \
                                f"- 매수수량 : {self.PositionManager[stockCode]['보유수량']}\n"
-                    self.logger.telegram_bot(self.stg_name, tele_msg)
+                    self.logger.telegram_bot(tele_msg)
                     continue
 
                 PositionManager_update = self.PositionManager[stockCode]
@@ -127,7 +127,7 @@ class Checker:
                                f"- 종목코드 : {stockCode}\n" \
                                f"- 매수가격 : {self.PositionManager[stockCode]['평균매수가격']}\n" \
                                f"- 매수수량 : {self.PositionManager[stockCode]['보유수량']}\n"
-                    self.logger.telegram_bot(self.stg_name, tele_msg)
+                    self.logger.telegram_bot(tele_msg)
                     if stockCode not in self.BuyList:
                         self.BuyList.append(stockCode)
                     with open(f'log/{self.stg_name}_보유현황.json', 'w') as json_file:
@@ -173,7 +173,7 @@ class Checker:
                     with open(f'log/{self.stg_name}_보유현황.json', 'w') as json_file:
                         json.dump(self.PositionManager, json_file, default=str)
 
-                    self.logger.telegram_bot(self.stg_name, tele_msg)
+                    self.logger.telegram_bot(tele_msg)
                     self.BuyList.remove(stockCode)
 
                     TradingManager_update = self.TradingManager[stockCode]
