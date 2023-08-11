@@ -8,9 +8,9 @@ class Logger:
         self.config = configparser.ConfigParser()
         self.config.read('config.ini', encoding = 'utf-8')
 
-    def telegram_bot(self, channel_name, msg):
-        bot_token = self.config['tele_bot']['token']
-        channel_id = self.config['tele_bot'][channel_name]
+    def telegram_bot(self,msg):
+        bot_token = self.config['투자전략기본']['텔레그램토큰']
+        channel_id = self.config['투자전략기본']['텔레봇']
         bot = telepot.Bot(token=bot_token)
         bot.sendMessage(chat_id=channel_id, text=msg)
 
