@@ -204,7 +204,6 @@ if __name__ == '__main__':
     stg_name = config_STG['전략이름']
     buyCond_id = config_STG['매수조건']
     sellCond_id = config_STG['매도조건']
-    motoo_gubun = config_STG['모투실투구분']
 
     totalBetSize = int(config_STG['투자비중']) # 총자산대비 투자비중
     maxCnt = int(config_STG['최대종목수'])  # 최대 보유종목수
@@ -217,9 +216,6 @@ if __name__ == '__main__':
                       매도옵션=sellOption)
 
     print('\n======================== 투자전략 분석중 ========================\n')
-
-    # subStocks = ['122630','305540']   #### 테스트 코드
-    # exitList = subStocks.copy()       #### 테스트 코드드
 
     HoldingList = GetHoldingList(stg_name)
     print(f'보유종목수 >> {len(HoldingList)}')
@@ -268,11 +264,12 @@ if __name__ == '__main__':
     qlist = [PriceQ, OrderQ, OrderCheckQ, ExecCheckQ, WindowQ]
     managerlist = [BuyList, PriceManger, OrderManager, ExecManager, PositionManager, BalanceManager, TradingManager]
 
-    if motoo_gubun == '실투' : motoo = False
-    elif motoo_gubun == '모투' : motoo = True
-
     config_setting = config['투자전략기본']
-    app_key, secret_key, acc_num, id = config_setting['한투앱키'], config_setting['한투시크릿'], config_setting['한투계좌번호'], config_setting['한투아이디']
+    app_key, secret_key, acc_num, id, motoo_gubun = config_setting['한투앱키'], config_setting['한투시크릿'], config_setting['한투계좌번호'], config_setting['한투아이디'], config_setting['모투실투구분']
+
+    if motoo_gubun == '실투' : motoo = False
+    else: motoo = True
+
     account_data = [app_key, secret_key, acc_num, id, motoo]
 
     app = QApplication(sys.argv)
@@ -287,6 +284,5 @@ if __name__ == '__main__':
     schedular = BackgroundScheduler(timezone='Asia/Seoul', job_defaults={'max_instances': 10})
     schedular.start()
     schedular.add_job(QuitAPP, args = (app, ), trigger='cron', hour = '15', minute = '32')
-
 
     app.exec_()
