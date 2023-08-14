@@ -357,7 +357,7 @@ class Strategy:
                 elif stockCode in self.BuyList and self.TradingManager[stockCode]['매도주문여부'] == False and datetime.datetime.now().strftime('%Y%m%d') == self.PositionManager[stockCode]['매도예정날짜'] :  # 보유수량이 있는데 매도주문을 안걸었으면 시가매도
                     ### 보유기간 만기청산
                     signalName = '종가매도 만기청산'
-                    self.OrderQ.put((stockCode, '매도', 'market', 0, self.PositionManager[stockCode]["보유수량"], signalName))
+                    self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
                     TradingManager_update['매도주문여부'] = True
                     self.TradingManager.update({stockCode: TradingManager_update})
@@ -365,7 +365,7 @@ class Strategy:
 
                 elif stockCode in self.ExitList and self.TradingManager[stockCode]['매도주문여부'] == False:
                     signalName = '종가매도 조건부청산'
-                    self.OrderQ.put((stockCode, '매도', 'market', 0, self.PositionManager[stockCode]["보유수량"], signalName))
+                    self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
                     TradingManager_update['매도주문여부'] = True
                     self.TradingManager.update({stockCode: TradingManager_update})
