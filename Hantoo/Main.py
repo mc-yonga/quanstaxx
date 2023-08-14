@@ -231,7 +231,7 @@ if __name__ == '__main__':
         addStockHubo = list(set(TradingList) - set(HoldingList + exitList))
         availcnt = stg_option['최대보유종목수'] - len(HoldingList)
         print(f'트레이딩리스트 갯수 >> {len(TradingList)}, 매수가능갯수 >> {availcnt}, 후보군 갯수 >> {len(addStockHubo)}')
-        if len(availcnt) >= len(addStockHubo):
+        if availcnt >= len(addStockHubo) and availcnt > 0:
             addStocks = addStockHubo
         else:
             addStocks = list(np.random.choice(addStockHubo, min(len(TradingList), availcnt), replace = False))    # 보유종목수가 최대보유종목수보다 적으면 매수조건을 충족하는 종목중에서 n개의 신규종목을 편입
