@@ -23,7 +23,6 @@ class Token:
                 """
 
         app_key, secret_key, acc_num, id = get_key()
-        print(acc_num, id)
         self.app_key = app_key
         self.secret_key = secret_key
         self.acc_num = acc_num
@@ -59,7 +58,7 @@ class Token:
         URL = f"{self.base_url}/{PATH}"
         res = requests.post(URL, headers=headers, data=json.dumps(body))
         ACCESS_TOKEN = res.json()["access_token"]
-        print('토큰갱신완료')
+        # print('토큰갱신완료')
         return ACCESS_TOKEN
 
 if __name__ == '__main__':

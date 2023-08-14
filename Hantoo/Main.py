@@ -218,7 +218,6 @@ if __name__ == '__main__':
     print('\n======================== 투자전략 분석중 ========================\n')
 
     HoldingList = GetHoldingList(stg_name)
-    print(f'보유종목수 >> {len(HoldingList)}')
     if len(HoldingList) == 0:
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
         exitList = []
@@ -230,7 +229,7 @@ if __name__ == '__main__':
         TradingList = CreateUniverse(frdate, todate, buyCond_id, universe=[])
         addStockHubo = list(set(TradingList) - set(HoldingList + exitList))
         availcnt = stg_option['최대보유종목수'] - len(HoldingList)
-        print(f'트레이딩리스트 갯수 >> {len(TradingList)}, 매수가능갯수 >> {availcnt}, 후보군 갯수 >> {len(addStockHubo)}')
+        # print(f'트레이딩리스트 갯수 >> {len(TradingList)}, 매수가능갯수 >> {availcnt}, 후보군 갯수 >> {len(addStockHubo)}')
         if availcnt >= len(addStockHubo) and availcnt > 0:
             addStocks = addStockHubo
         else:
