@@ -100,7 +100,7 @@ class Main(QMainWindow):
             buyQty = self.PositionManager[stockCode]['보유수량']
             if buyQty > 0:
                 signalName = '전량청산'
-                self.OrderQ.put((stockCode, '매도', 'market',0, self.PositionManager[stockCode]['보유수량'], signalName))
+                self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
 
     def btn6(self):
         pprint.pprint(dict(self.BalanceManager))
