@@ -337,7 +337,7 @@ class Strategy:
                         self.TradingManager.update({stockCode : TradingManager_update})
                         print(f'[장마감 종가매수] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 주문수량 : {orderQty}')
 
-                elif self.TradingManager[stockCode]["매수주문여부"] == True and stockCode not in self.BuyList and self.TradingManager[stockCode]['매수주문번호'] in self.OrderManager.keys():
+                elif self.TradingManager[stockCode]["매수주문여부"] == True and stockCode not in self.BuyList and self.TradingManager[stockCode]['매수주문번호'] in self.OrderManager.keys() and self.stg_option['매수옵션'] == '종가':
                     ### 매수주문을 했으나 예상체결가가 변경되어 매수주문을 수정해야 하는 경우 ###
 
                     if expacPrice != self.PriceManger[stockCode]['예상체결가'] and self.PriceManger[stockCode]['예상체결가'] != 0: ### 예상체결가격이 변했으면 주문수량을 정정해야 함
@@ -354,7 +354,7 @@ class Strategy:
                         orderQty = self.OrderManager[self.TradingManager[stockCode]["매수주문번호"]]['주문수량']
                         print(f'[종가매수대기] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 예상체결가격 : {expacPrice}, 주문수량 {orderQty}')
 
-                elif stockCode in self.BuyList and self.TradingManager[stockCode]['매도주문여부'] == False and datetime.datetime.now().strftime('%Y%m%d') == self.PositionManager[stockCode]['매도예정날짜'] :  # 보유수량이 있는데 매도주문을 안걸었으면 시가매도
+                elif stockCode in self.BuyList and self.TradingManager[stockCode]['매도주문여부'] == False and datetime.datetime.now().strftime('%Y%m%d') == self.PositionManager[stockCode]['매도예정날짜'] and self.stg_option['매도옵션'] == '종가' :  # 보유수량이 있는데 매도주문을 안걸었으면 시가매도
                     ### 보유기간 만기청산
                     signalName = '종가매도 만기청산'
                     self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
@@ -363,7 +363,7 @@ class Strategy:
                     self.TradingManager.update({stockCode: TradingManager_update})
                     print(f'[종가매도 만기청산] 현재시간 : {datetime.datetime.now().strftime("%Y%m%d")}, 종목코드 : {stockCode}, 매도주문수량 : {self.PositionManager[stockCode]["보유수량"]}')
 
-                elif stockCode in self.ExitList and self.TradingManager[stockCode]['매도주문여부'] == False:
+                elif stockCode in self.ExitList and self.TradingManager[stockCode]['매도주문여부'] == False and stockCode in self.BuyList and self.stg_option['매도옵션'] == '종가':
                     signalName = '종가매도 조건부청산'
                     self.OrderQ.put(('new', stockCode, '매도', 'market', 0, self.PositionManager[stockCode]['보유수량'], signalName))
                     TradingManager_update = self.TradingManager[stockCode]
@@ -371,7 +371,7 @@ class Strategy:
                     self.TradingManager.update({stockCode: TradingManager_update})
                     print(f'[종가매도 조건부청산] 현재시간 : {datetime.datetime.now().strftime("%Y%m%d")}, 종목코드 : {stockCode}, 매도주문수량 : {self.PositionManager[stockCode]["보유수량"]}')
 
-                elif stockCode in self.BuyList and self.TradingManager[stockCode]['매도주문여부'] == True and self.TradingManager[stockCode]['매도주문번호'] in self.OrderManager.keys(): # 보유수량이 있는데 매도주문을 걸었으면 시가매도대기
+                elif stockCode in self.BuyList and self.TradingManager[stockCode]['매도주문여부'] == True and self.TradingManager[stockCode]['매도주문번호'] in self.OrderManager.keys() and self.stg_option['매도옵션'] == '종가': # 보유수량이 있는데 매도주문을 걸었으면 시가매도대기
                     expacProfit = expacPrice / self.PositionManager[stockCode]['평균매수가격'] - 1
                     expacProfit = round(expacProfit * 100, 4)
                     print(f'[종가매도 대기] 현재시간 : {datetime.datetime.now().strftime("%H:%M:%S")}, 종목코드 : {stockCode}, 예상체결가격 : {expacPrice}, 예상수익률 : {expacProfit}%')
