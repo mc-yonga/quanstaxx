@@ -97,6 +97,7 @@ class Order:
         self.orderSignal = OrderSignal(self)
         self.orderSignal.CreateMarketOrder.connect(self.CreateMarketOrder)
         self.orderSignal.CreateLimitOrder.connect(self.CreateLimitOrder)
+        self.orderSignal.EditOrder.connect(self.ModifyOrder)
         self.orderSignal.start()
 
         app.exec_()
