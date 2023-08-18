@@ -101,7 +101,7 @@ class Checker:
                                f"- 시간 : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n" \
                                f"- 전략이름 : {self.stg_name}\n" \
                                f"- 종목코드 : {stockCode}\n" \
-                               f"- 매수가격 : {self.PositionManager[stockCode]['평균매수가격']}\n" \
+                               f"- 매수가격 : {round(self.PositionManager[stockCode]['평균매수가격'])}\n" \
                                f"- 매수수량 : {self.PositionManager[stockCode]['보유수량']}\n"
                     self.logger.telegram_bot(tele_msg)
                     continue
@@ -125,7 +125,7 @@ class Checker:
                                f"- 시간 : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n" \
                                f"- 전략이름 : {self.stg_name}\n" \
                                f"- 종목코드 : {stockCode}\n" \
-                               f"- 매수가격 : {self.PositionManager[stockCode]['평균매수가격']}\n" \
+                               f"- 매수가격 : {round(self.PositionManager[stockCode]['평균매수가격'])}\n" \
                                f"- 매수수량 : {self.PositionManager[stockCode]['보유수량']}\n"
                     self.logger.telegram_bot(tele_msg)
                     if stockCode not in self.BuyList:
@@ -162,7 +162,7 @@ class Checker:
                                f"- 시간 : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n" \
                                f"- 전략이름 : {self.stg_name}\n" \
                                f"- 종목코드 : {stockCode}\n" \
-                               f"- 매도가격 : {self.ExecManager[orderID]['평균체결가격']}\n" \
+                               f"- 매도가격 : {round(self.ExecManager[orderID]['평균체결가격'])}\n" \
                                f"- 매도수량 : {self.ExecManager[orderID]['누적체결수량']}\n"
 
                     PositionManager_update['평균매수가격'] = 0
